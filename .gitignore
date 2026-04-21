@@ -138,3 +138,21 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 /.nx/*
+
+# Terraform (state, local cache, override files, crash logs)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Local AI tooling/planning artifacts
+.codex
+.codex/
+.opencode/
+.planning/
+AGENTS.md
