@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ISSUE_CATEGORY_LABELS,
-  ISSUE_STATUS_LABELS,
   STATUS_COLORS,
   type Issue,
   type Upvote,
 } from '@visiblefix/shared/types';
+import { useI18n } from '@/components/i18n-provider';
+import { SiteShell } from '@/components/site-shell';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, SectionEyebrow } from '@/components/ui';
 
 const API_BASE_URL = '/api/v1';
 
@@ -17,6 +17,7 @@ type IssueDetailPageProps = {
 };
 
 export default function IssueDetailPage({ params }: IssueDetailPageProps) {
+  const { t, categoryLabel, statusLabel, formatDateTime } = useI18n();
   const [issueId, setIssueId] = useState<string>('');
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,14 +55,15 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
     const load = async () => {
       setLoading(true);
       setError('');
+
       try {
         const [issueResponse, upvotesResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/issues/${issueId}`),
           fetch(`${API_BASE_URL}/issues/${issueId}/upvotes`),
         ]);
 
-        if (!issueResponse.ok) throw new Error('Issue not found.');
-        if (!upvotesResponse.ok) throw new Error('Unable to load issue upvotes.');
+        if (!issueResponse.ok) throw new Error(t('Issue not found.'));
+        if (!upvotesResponse.ok) throw new Error(t('Unable to load issue upvotes.'));
 
         const issueBody = (await issueResponse.json()) as { data: Issue };
         const upvotesBody = (await upvotesResponse.json()) as { data: Upvote[] };
@@ -69,7 +71,7 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
         setIssue(issueBody.data);
         setHasUpvoted((upvotesBody.data ?? []).some((upvote) => upvote.deviceId === deviceId));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unexpected error while loading issue.');
+        setError(err instanceof Error ? err.message : t('Unexpected error while loading issue.'));
       } finally {
         setLoading(false);
       }
@@ -87,21 +89,19 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
     try {
       const response = await fetch(`${API_BASE_URL}/upvotes`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ issueId, deviceId }),
       });
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(body?.message || 'Unable to register upvote.');
+        throw new Error(body?.message || t('Unable to register upvote.'));
       }
 
       setHasUpvoted(true);
       setIssue((prev) => (prev ? { ...prev, upvoteCount: prev.upvoteCount + 1 } : prev));
     } catch (err) {
-      setUpvoteError(err instanceof Error ? err.message : 'Unexpected upvote error.');
+      setUpvoteError(err instanceof Error ? err.message : t('Unexpected upvote error.'));
     } finally {
       setUpvoting(false);
     }
@@ -110,7 +110,7 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
   const handleShare = async () => {
     if (!issue) return;
 
-    const shareText = `${issue.title}\nView on VisibleFix: ${window.location.href}`;
+    const shareText = `${issue.title}\n${t('View on VisibleFix')}: ${window.location.href}`;
 
     try {
       if (navigator.share) {
@@ -123,117 +123,107 @@ export default function IssueDetailPage({ params }: IssueDetailPageProps) {
       }
 
       await navigator.clipboard.writeText(shareText);
-      alert('Issue link copied to clipboard.');
+      alert(t('Issue link copied to clipboard.'));
     } catch {
-      setUpvoteError('Unable to share this issue right now.');
+      setUpvoteError(t('Unable to share this issue right now.'));
     }
   };
 
-  const timeline = issue
-    ? [
-        { key: 'reported', label: ISSUE_STATUS_LABELS.reported, date: issue.reportedAt, color: STATUS_COLORS.reported },
-        ...(issue.acknowledgedAt
-          ? [{ key: 'acknowledged', label: ISSUE_STATUS_LABELS.acknowledged, date: issue.acknowledgedAt, color: STATUS_COLORS.acknowledged }]
-          : []),
-        ...(issue.inProgressAt
-          ? [{ key: 'in_progress', label: ISSUE_STATUS_LABELS.in_progress, date: issue.inProgressAt, color: STATUS_COLORS.in_progress }]
-          : []),
-        ...(issue.resolvedAt
-          ? [{ key: 'resolved', label: ISSUE_STATUS_LABELS.resolved, date: issue.resolvedAt, color: STATUS_COLORS.resolved }]
-          : []),
-        ...(issue.rejectedAt
-          ? [{ key: 'rejected', label: ISSUE_STATUS_LABELS.rejected, date: issue.rejectedAt, color: STATUS_COLORS.rejected }]
-          : []),
-      ]
-    : [];
+  const timeline = useMemo(() => {
+    if (!issue) return [];
+
+    return [
+      { key: 'reported', label: statusLabel('reported'), date: issue.reportedAt, color: STATUS_COLORS.reported },
+      ...(issue.acknowledgedAt
+        ? [{ key: 'acknowledged', label: statusLabel('acknowledged'), date: issue.acknowledgedAt, color: STATUS_COLORS.acknowledged }]
+        : []),
+      ...(issue.inProgressAt
+        ? [{ key: 'in_progress', label: statusLabel('in_progress'), date: issue.inProgressAt, color: STATUS_COLORS.in_progress }]
+        : []),
+      ...(issue.resolvedAt
+        ? [{ key: 'resolved', label: statusLabel('resolved'), date: issue.resolvedAt, color: STATUS_COLORS.resolved }]
+        : []),
+      ...(issue.rejectedAt
+        ? [{ key: 'rejected', label: statusLabel('rejected'), date: issue.rejectedAt, color: STATUS_COLORS.rejected }]
+        : []),
+    ];
+  }, [issue, statusLabel]);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-6 py-10 text-slate-900">
-      <Link href="/issues" className="text-sm font-medium text-blue-700 hover:text-blue-800">
-        ← Back to discovery
-      </Link>
-
+    <SiteShell activePage="issues">
       {loading ? (
-        <p className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">Loading issue…</p>
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">{t('Loading issue record…')}</CardContent>
+        </Card>
       ) : error ? (
-        <p className="mt-6 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p>
+        <Card>
+          <CardContent className="p-6 text-sm text-[#b42318]">{error}</CardContent>
+        </Card>
       ) : issue ? (
-        <article className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
-          <h1 className="text-2xl font-bold tracking-tight">{issue.title}</h1>
-          <p className="mt-3 text-sm text-slate-600">{issue.description || 'No additional description provided.'}</p>
+        <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <Card>
+            <CardHeader>
+              <SectionEyebrow>{t('Public issue record')}</SectionEyebrow>
+              <CardTitle className="mt-3 text-4xl">{issue.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="status" style={{ backgroundColor: STATUS_COLORS[issue.status] }}>
+                  {statusLabel(issue.status)}
+                </Badge>
+                <Badge variant="subtle">{categoryLabel(issue.category)}</Badge>
+              </div>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span
-              className="rounded-full px-3 py-1 text-xs font-semibold text-white"
-              style={{ backgroundColor: STATUS_COLORS[issue.status] }}
-            >
-              {ISSUE_STATUS_LABELS[issue.status]}
-            </span>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-              {ISSUE_CATEGORY_LABELS[issue.category]}
-            </span>
-          </div>
+              <p className="text-sm leading-7 text-muted-foreground">
+                {issue.description || t('No additional description was provided for this report.')}
+              </p>
 
-          <dl className="mt-6 grid grid-cols-1 gap-3 text-sm text-slate-700 sm:grid-cols-2">
-            <div>
-              <dt className="font-semibold">Latitude</dt>
-              <dd>{issue.latitude}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold">Longitude</dt>
-              <dd>{issue.longitude}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold">Reported at</dt>
-              <dd>{new Date(issue.reportedAt).toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold">Upvotes</dt>
-              <dd>{issue.upvoteCount}</dd>
-            </div>
-          </dl>
-
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold text-slate-900">Status timeline</h2>
-            <ol className="mt-3 space-y-3">
-              {timeline.map((item) => (
-                <li key={item.key} className="flex items-start gap-3 rounded-md border border-slate-200 p-3">
-                  <span className="mt-1 h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{item.label}</p>
-                    <p className="text-xs text-slate-600">{new Date(item.date).toLocaleString()}</p>
+              <div className="grid gap-px border border-border bg-border">
+                {[
+                  [t('Latitude'), `${issue.latitude}`],
+                  [t('Longitude'), `${issue.longitude}`],
+                  [t('Reported'), formatDateTime(issue.reportedAt)],
+                  [t('Upvotes'), `${issue.upvoteCount}`],
+                ].map(([label, value]) => (
+                  <div key={label} className="grid grid-cols-[110px_1fr] gap-4 bg-card px-4 py-3 text-sm">
+                    <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</span>
+                    <span className="font-medium text-foreground">{value}</span>
                   </div>
-                </li>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={handleUpvote} disabled={hasUpvoted || upvoting}>
+                  {upvoting ? t('Submitting…') : hasUpvoted ? `${t('Supported')} (${issue.upvoteCount})` : `${t('Support')} (${issue.upvoteCount})`}
+                </Button>
+                <Button variant="outline" onClick={handleShare}>
+                  {t('Share issue')}
+                </Button>
+              </div>
+
+              {upvoteError ? <div className="border border-[#fda29b] bg-[#fef3f2] px-4 py-3 text-sm text-[#b42318]">{upvoteError}</div> : null}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <SectionEyebrow>{t('Status timeline')}</SectionEyebrow>
+              <CardTitle className="mt-3 text-3xl">{t('Lifecycle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-px border border-border bg-border p-0">
+              {timeline.map((item) => (
+                <div key={item.key} className="grid grid-cols-[16px_1fr] gap-4 bg-card px-5 py-4">
+                  <span className="mt-1 h-4 w-4 border" style={{ backgroundColor: item.color, borderColor: item.color }} />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                    <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{formatDateTime(item.date)}</p>
+                  </div>
+                </div>
               ))}
-            </ol>
-          </section>
-
-          <section className="mt-8 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={handleUpvote}
-              disabled={hasUpvoted || upvoting}
-              className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
-                hasUpvoted
-                  ? 'cursor-not-allowed bg-emerald-600 text-white'
-                  : 'bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-70'
-              }`}
-            >
-              {upvoting ? 'Submitting…' : hasUpvoted ? `✓ Supported (${issue.upvoteCount})` : `👍 Support (${issue.upvoteCount})`}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleShare}
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100"
-            >
-              Share
-            </button>
-          </section>
-
-          {upvoteError && <p className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{upvoteError}</p>}
-        </article>
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
-    </main>
+    </SiteShell>
   );
 }

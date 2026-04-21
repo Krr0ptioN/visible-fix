@@ -1,57 +1,68 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View } from 'react-native';
-
-import MapScreen from '../screens/MapScreen';
-import ReportScreen from '../screens/ReportScreen';
-import MyIssuesScreen from '../screens/MyIssuesScreen';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Text } from 'react-native';
+import type { MainTabParamList, RootStackParamList } from './types';
 import IssueDetailScreen from '../screens/IssueDetailScreen';
+import MapScreen from '../screens/MapScreen';
+import OperationsScreen from '../screens/OperationsScreen';
+import OverviewScreen from '../screens/OverviewScreen';
+import ReportScreen from '../screens/ReportScreen';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function TabBarIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Map: '🗺️',
-    Report: '➕',
-    'My Issues': '📋',
+function TabIcon({ routeName, focused }: { routeName: keyof MainTabParamList; focused: boolean }) {
+  const labelByRoute: Record<keyof MainTabParamList, string> = {
+    Overview: 'OV',
+    Discovery: 'MAP',
+    Report: 'NEW',
+    Operations: 'OPS',
   };
-  return (
-    <Text style={{ fontSize: 24, opacity: focused ? 1 : 0.5 }}>
-      {icons[name] || '○'}
-    </Text>
-  );
+
+  return <Text style={{ fontSize: 10, fontWeight: '800', color: focused ? '#0f1012' : '#6d7078' }}>{labelByRoute[routeName]}</Text>;
 }
 
-function TabNavigator() {
+function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused }) => <TabBarIcon name={route.name} focused={focused} />,
-        tabBarActiveTintColor: '#1E3A8A',
-        tabBarInactiveTintColor: '#6B7280',
-        headerStyle: { backgroundColor: '#1E3A8A' },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: 'bold' },
+        tabBarIcon: ({ focused }) => <TabIcon routeName={route.name as keyof MainTabParamList} focused={focused} />,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+          textTransform: 'uppercase',
+        },
+        tabBarItemStyle: {
+          borderRightWidth: 1,
+          borderRightColor: 'rgba(12,12,13,0.12)',
+        },
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(12,12,13,0.14)',
+          backgroundColor: '#ffffff',
+          minHeight: 58,
+          paddingTop: 4,
+          paddingBottom: 4,
+        },
+        tabBarActiveTintColor: '#0f1012',
+        tabBarInactiveTintColor: '#6d7078',
+        headerStyle: {
+          backgroundColor: '#f3f3f1',
+        },
+        headerShadowVisible: false,
+        headerTintColor: '#0f1012',
+        headerTitleStyle: {
+          fontSize: 16,
+          fontWeight: '800',
+        },
       })}
     >
-      <Tab.Screen 
-        name="Map" 
-        component={MapScreen}
-        options={{ title: 'Harita' }}
-      />
-      <Tab.Screen 
-        name="Report" 
-        component={ReportScreen}
-        options={{ title: 'Bildir' }}
-      />
-      <Tab.Screen 
-        name="My Issues" 
-        component={MyIssuesScreen}
-        options={{ title: 'Bildirimlerim' }}
-      />
+      <Tab.Screen name="Overview" component={OverviewScreen} />
+      <Tab.Screen name="Discovery" component={MapScreen} />
+      <Tab.Screen name="Report" component={ReportScreen} />
+      <Tab.Screen name="Operations" component={OperationsScreen} />
     </Tab.Navigator>
   );
 }
@@ -61,21 +72,19 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
-          headerStyle: { backgroundColor: '#1E3A8A' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: 'bold' },
+          headerStyle: {
+            backgroundColor: '#f3f3f1',
+          },
+          headerShadowVisible: false,
+          headerTintColor: '#0f1012',
+          headerTitleStyle: {
+            fontSize: 16,
+            fontWeight: '800',
+          },
         }}
       >
-        <Stack.Screen 
-          name="Main" 
-          component={TabNavigator}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="IssueDetail" 
-          component={IssueDetailScreen}
-          options={{ title: 'Detaylar' }}
-        />
+        <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
+        <Stack.Screen name="IssueDetail" component={IssueDetailScreen} options={{ title: 'Issue record' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -65,7 +65,23 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   name: text('name'),
   role: text('role').notNull().default('citizen'), // citizen, municipal_staff, admin
+  passwordHash: text('password_hash'),
   municipalityId: integer('municipality_id').references(() => municipalities.id),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const authSessions = pgTable('auth_sessions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  refreshTokenHash: text('refresh_token_hash').notNull().unique(),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  expiresAt: timestamp('expires_at').notNull(),
+  revokedAt: timestamp('revoked_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -75,3 +91,4 @@ export type NewIssue = typeof issues.$inferInsert;
 export type Municipality = typeof municipalities.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Upvote = typeof upvotes.$inferSelect;
+export type AuthSession = typeof authSessions.$inferSelect;

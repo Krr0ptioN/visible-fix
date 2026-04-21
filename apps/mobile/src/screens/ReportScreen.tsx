@@ -1,51 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { useNavigation } from '@react-navigation/native';
-import api from '../services/api';
+import type { IssueCategory } from '../../../../libs/shared/types/src';
+import { ISSUE_CATEGORY_LABELS } from '../../../../libs/shared/types/src';
 import { useDevice } from '../hooks/useDevice';
-import type { IssueCategory } from '../../../libs/shared/types/src';
+import api from '../services/api';
+import { addReportedIssueId } from '../services/reported-issues';
 
-const CATEGORIES: { key: IssueCategory; label: string }[] = [
-  { key: 'pothole', label: 'Çukur' },
-  { key: 'streetlight', label: 'Sokak Lambası' },
-  { key: 'waste', label: 'Atık' },
-  { key: 'sidewalk', label: 'Kaldırım' },
-  { key: 'water_leak', label: 'Su Kaçağı' },
-  { key: 'accessibility', label: 'Erişilebilirlik' },
-  { key: 'other', label: 'Diğer' },
-];
+const CATEGORIES: IssueCategory[] = ['pothole', 'streetlight', 'waste', 'sidewalk', 'water_leak', 'accessibility', 'other'];
 
 export default function ReportScreen() {
-  const navigation = useNavigation();
   const { deviceId } = useDevice();
-  
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<IssueCategory>('other');
-  const [image, setImage] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const requestLocation = async () => {
+  const requestCurrentLocation = async () => {
     setLocationLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Konum izni gerekli', 'Sorunun yerini belirlemek için konum izni verin.');
+        Alert.alert('Location required', 'Please allow location permission to submit a precise report.');
         return;
       }
-      
-      const loc = await Location.getCurrentPositionAsync({});
+
+      const current = await Location.getCurrentPositionAsync({});
       setLocation({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
       });
     } catch (error) {
-      console.error('Location error:', error);
-      Alert.alert('Hata', 'Konum alınamadı');
+      console.error('Failed to get location:', error);
+      Alert.alert('Location error', 'Unable to access your location.');
     } finally {
       setLocationLoading(false);
     }
@@ -56,29 +47,30 @@ export default function ReportScreen() {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.85,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setImage(result.assets[0].uri);
+        setImageUri(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Image picker error:', error);
+      console.error('Failed to pick image:', error);
+      Alert.alert('Camera error', 'Unable to capture image right now.');
     }
   };
 
-  const handleSubmit = async () => {
+  const submit = async () => {
     if (!title.trim()) {
-      Alert.alert('Hata', 'Lütfen bir başlık girin');
-      return;
-    }
-    if (!location) {
-      Alert.alert('Hata', 'Lütfen konum belirleyin');
+      Alert.alert('Validation', 'Title is required.');
       return;
     }
 
-    setLoading(true);
+    if (!location) {
+      Alert.alert('Validation', 'Location is required.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
       const issue = await api.createIssue({
         title: title.trim(),
@@ -86,123 +78,221 @@ export default function ReportScreen() {
         category,
         latitude: location.latitude,
         longitude: location.longitude,
+        imageUrl: imageUri || undefined,
         deviceId,
       });
-      
-      Alert.alert('Başarılı!', 'Sorununuz bildirildi.', [
-        { text: 'Tamam', onPress: () => {
-          setTitle('');
-          setDescription('');
-          setCategory('other');
-          setImage(null);
-          setLocation(null);
-        }}
-      ]);
-    } catch (error: any) {
-      console.error('Submit error:', error);
-      Alert.alert('Hata', error?.message || 'Sorun bildirilemedi');
+
+      await addReportedIssueId(issue.id);
+
+      setTitle('');
+      setDescription('');
+      setCategory('other');
+      setImageUri(null);
+      setLocation(null);
+      Alert.alert('Submitted', 'Your report was published successfully.');
+    } catch (error) {
+      console.error('Failed to submit report:', error);
+      Alert.alert('Submission error', error instanceof Error ? error.message : 'Unable to submit report.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.sectionTitle}>Sorunun Fotoğrafı</Text>
-      <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.previewImage} />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.imagePlaceholderText}>📷 Fotoğraf Çek</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Konum</Text>
-      <TouchableOpacity 
-        style={[styles.locationButton, location && styles.locationButtonActive]} 
-        onPress={requestLocation}
-        disabled={locationLoading}
-      >
-        {locationLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : location ? (
-          <Text style={styles.locationButtonText}>✓ Konum Alındı</Text>
-        ) : (
-          <Text style={styles.locationButtonText}>📍 Konum Belirle</Text>
-        )}
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Kategori</Text>
-      <View style={styles.categoryGrid}>
-        {CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat.key}
-            style={[styles.categoryChip, category === cat.key && styles.categoryChipActive]}
-            onPress={() => setCategory(cat.key)}
-          >
-            <Text style={[styles.categoryText, category === cat.key && styles.categoryTextActive]}>
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.card}>
+        <Text style={styles.eyebrow}>Citizen intake</Text>
+        <Text style={styles.title}>Report with less friction and more precision.</Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Başlık</Text>
-      <TextInput
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Kısa bir başlık girin"
-        placeholderTextColor="#9CA3AF"
-      />
+      <View style={styles.card}>
+        <Text style={styles.sectionLabel}>Evidence</Text>
+        <TouchableOpacity style={styles.mediaSurface} onPress={pickImage}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.mediaImage} />
+          ) : (
+            <Text style={styles.mediaPlaceholder}>Tap to capture photo evidence</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
-      <Text style={styles.sectionTitle}>Açıklama (İsteğe Bağlı)</Text>
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Sorunu detaylı olarak açıklayın"
-        placeholderTextColor="#9CA3AF"
-        multiline
-        numberOfLines={4}
-      />
-
-      <TouchableOpacity 
-        style={[styles.submitButton, loading && styles.submitButtonDisabled]} 
-        onPress={handleSubmit}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
+      <View style={styles.card}>
+        <Text style={styles.sectionLabel}>Location</Text>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => void requestCurrentLocation()} disabled={locationLoading}>
+          {locationLoading ? <ActivityIndicator color="#0f1012" /> : <Text style={styles.secondaryButtonText}>{location ? 'Location captured' : 'Use current location'}</Text>}
+        </TouchableOpacity>
+        {location ? (
+          <Text style={styles.metaText}>
+            {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+          </Text>
         ) : (
-          <Text style={styles.submitButtonText}>Sorun Bildir</Text>
+          <Text style={styles.metaText}>Capture location before submitting.</Text>
         )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionLabel}>Category</Text>
+        <View style={styles.categoryGrid}>
+          {CATEGORIES.map((entry) => (
+            <TouchableOpacity key={entry} style={[styles.categoryChip, category === entry && styles.categoryChipActive]} onPress={() => setCategory(entry)}>
+              <Text style={[styles.categoryChipText, category === entry && styles.categoryChipTextActive]}>{ISSUE_CATEGORY_LABELS[entry]}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionLabel}>Title</Text>
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Large pothole near bus stop"
+          placeholderTextColor="#6d7078"
+        />
+
+        <Text style={styles.sectionLabel}>Description</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="What should municipal teams know before they arrive?"
+          placeholderTextColor="#6d7078"
+          multiline
+        />
+      </View>
+
+      <TouchableOpacity style={styles.primaryButton} disabled={submitting} onPress={() => void submit()}>
+        {submitting ? <ActivityIndicator color="#ffffff" /> : <Text style={styles.primaryButtonText}>Submit issue</Text>}
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginTop: 16, marginBottom: 8 },
-  imagePicker: { height: 200, borderRadius: 12, overflow: 'hidden' },
-  previewImage: { width: '100%', height: '100%' },
-  imagePlaceholder: { flex: 1, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderStyle: 'dashed', borderColor: '#D1D5DB', borderRadius: 12 },
-  imagePlaceholderText: { fontSize: 16, color: '#6B7280' },
-  locationButton: { backgroundColor: '#1E3A8A', padding: 14, borderRadius: 8, alignItems: 'center', marginBottom: 8 },
-  locationButtonActive: { backgroundColor: '#10B981' },
-  locationButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  categoryChip: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F3F4F6', borderRadius: 20 },
-  categoryChipActive: { backgroundColor: '#1E3A8A' },
-  categoryText: { fontSize: 14, color: '#374151' },
-  categoryTextActive: { color: '#fff' },
-  input: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: '#F9FAFB' },
-  textArea: { height: 100, textAlignVertical: 'top' },
-  submitButton: { backgroundColor: '#1E3A8A', padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 24, marginBottom: 40 },
-  submitButtonDisabled: { backgroundColor: '#9CA3AF' },
-  submitButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f3f3f1',
+  },
+  content: {
+    padding: 16,
+    gap: 10,
+    paddingBottom: 24,
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+    backgroundColor: '#ffffff',
+    padding: 12,
+    gap: 10,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    color: '#6d7078',
+  },
+  title: {
+    fontSize: 25,
+    lineHeight: 30,
+    fontWeight: '800',
+    color: '#0c0c0d',
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: '#6d7078',
+  },
+  mediaSurface: {
+    minHeight: 180,
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+    backgroundColor: '#ececef',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaImage: {
+    width: '100%',
+    height: 220,
+  },
+  mediaPlaceholder: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#4f535b',
+  },
+  secondaryButton: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0c0c0d',
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#4f535b',
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  categoryChip: {
+    minHeight: 34,
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  categoryChipActive: {
+    borderColor: '#0f1012',
+    backgroundColor: '#0f1012',
+  },
+  categoryChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4f535b',
+  },
+  categoryChipTextActive: {
+    color: '#ffffff',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+    backgroundColor: '#ffffff',
+    minHeight: 42,
+    paddingHorizontal: 12,
+    color: '#0c0c0d',
+    fontSize: 14,
+  },
+  textArea: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+    paddingVertical: 10,
+  },
+  primaryButton: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: '#0f1012',
+    backgroundColor: '#0f1012',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });

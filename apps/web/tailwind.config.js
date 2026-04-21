@@ -17,7 +17,37 @@ module.exports = {
 //     ...createGlobPatternsForDependencies(__dirname)
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        card: 'var(--card)',
+        'card-foreground': 'var(--card-foreground)',
+        border: 'var(--border)',
+        input: 'var(--input)',
+        primary: 'var(--primary)',
+        'primary-foreground': 'var(--primary-foreground)',
+        secondary: 'var(--secondary)',
+        'secondary-foreground': 'var(--secondary-foreground)',
+        muted: 'var(--muted)',
+        'muted-foreground': 'var(--muted-foreground)',
+      },
+      borderRadius: {
+        none: '0px',
+      },
+      boxShadow: {
+        panel: '0 18px 40px rgba(0, 0, 0, 0.06)',
+        razor: '0 0 0 1px rgba(0, 0, 0, 0.04)',
+        tight: '0 12px 28px rgba(0, 0, 0, 0.1)',
+      },
+      fontFamily: {
+        sans: ['"Avenir Next"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+        display: ['"Avenir Next Condensed"', '"Avenir Next"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+      },
+      letterSpacing: {
+        tightest: '-0.06em',
+      },
+    },
   },
   plugins: [],
 };

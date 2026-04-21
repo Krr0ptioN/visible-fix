@@ -3,6 +3,8 @@ export type IssueStatus = 'reported' | 'acknowledged' | 'in_progress' | 'resolve
 
 export type IssueCategory = 'pothole' | 'streetlight' | 'waste' | 'sidewalk' | 'water_leak' | 'accessibility' | 'other';
 
+export type UserRole = 'citizen' | 'municipal_staff' | 'admin';
+
 export interface Issue {
   id: string;
   title: string;
@@ -39,6 +41,33 @@ export interface Upvote {
   issueId: string;
   deviceId: string;
   createdAt: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: UserRole;
+  municipalityId: string | null;
+}
+
+export interface AdminDashboardStats {
+  totalIssues: number;
+  reportedIssues: number;
+  acknowledgedIssues: number;
+  inProgressIssues: number;
+  resolvedIssues: number;
+  rejectedIssues: number;
+  openIssues: number;
+}
+
+export interface AdminOverview {
+  user: AuthUser;
+  stats: AdminDashboardStats;
+}
+
+export interface AdminIssueFilters extends IssueFilters {
+  q?: string;
 }
 
 export interface IssueFilters {

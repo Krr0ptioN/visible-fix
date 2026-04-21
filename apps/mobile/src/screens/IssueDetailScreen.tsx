@@ -1,171 +1,269 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, Share, Alert } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import api from '../services/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Image, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import type { Issue } from '../../../../libs/shared/types/src';
+import { ISSUE_CATEGORY_LABELS, ISSUE_STATUS_LABELS, STATUS_COLORS } from '../../../../libs/shared/types/src';
 import { useDevice } from '../hooks/useDevice';
-import type { Issue } from '../../../libs/shared/types/src';
-import { ISSUE_STATUS_LABELS, STATUS_COLORS, ISSUE_CATEGORY_LABELS } from '../../../libs/shared/types/src';
+import api from '../services/api';
 
 export default function IssueDetailScreen() {
   const route = useRoute();
-  const navigation = useNavigation();
   const { issueId } = route.params as { issueId: string };
   const { deviceId } = useDevice();
-  
+
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
-  const [upvoting, setUpvoting] = useState(false);
   const [hasUpvoted, setHasUpvoted] = useState(false);
+  const [upvoting, setUpvoting] = useState(false);
 
   useEffect(() => {
-    const fetchIssue = async () => {
+    const load = async () => {
+      setLoading(true);
       try {
-        const data = await api.getIssueById(issueId);
-        setIssue(data);
+        const issueData = await api.getIssueById(issueId);
+        setIssue(issueData);
       } catch (error) {
-        console.error('Failed to fetch issue:', error);
-        Alert.alert('Hata', 'Sorun detayları yüklenemedi');
+        Alert.alert('Error', 'Failed to load issue details.');
+        console.error('Issue detail load failed:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchIssue();
+
+    void load();
   }, [issueId]);
 
+  const timeline = useMemo(() => {
+    if (!issue) return [];
+    return [
+      { key: 'reported', label: 'Reported', date: issue.reportedAt, color: STATUS_COLORS.reported },
+      ...(issue.acknowledgedAt ? [{ key: 'acknowledged', label: 'Acknowledged', date: issue.acknowledgedAt, color: STATUS_COLORS.acknowledged }] : []),
+      ...(issue.inProgressAt ? [{ key: 'in_progress', label: 'In progress', date: issue.inProgressAt, color: STATUS_COLORS.in_progress }] : []),
+      ...(issue.resolvedAt ? [{ key: 'resolved', label: 'Resolved', date: issue.resolvedAt, color: STATUS_COLORS.resolved }] : []),
+      ...(issue.rejectedAt ? [{ key: 'rejected', label: 'Rejected', date: issue.rejectedAt, color: STATUS_COLORS.rejected }] : []),
+    ];
+  }, [issue]);
+
   const handleUpvote = async () => {
-    if (hasUpvoted) return;
+    if (!issue || hasUpvoted || upvoting) return;
+
     setUpvoting(true);
     try {
-      await api.createUpvote(issueId, deviceId);
+      await api.createUpvote(issue.id, deviceId);
+      setIssue((current) => (current ? { ...current, upvoteCount: current.upvoteCount + 1 } : null));
       setHasUpvoted(true);
-      setIssue(prev => prev ? { ...prev, upvoteCount: prev.upvoteCount + 1 } : null);
     } catch (error) {
-      console.error('Upvote error:', error);
+      console.error('Failed to upvote issue:', error);
+      Alert.alert('Error', 'Unable to add support right now.');
     } finally {
       setUpvoting(false);
     }
   };
 
   const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `${issue?.title}\nVisibleFix'te görüntüle: visiblefix.app/issue/${issueId}`,
-      });
-    } catch (error) {
-      console.error('Share error:', error);
-    }
+    if (!issue) return;
+    await Share.share({
+      message: `${issue.title}\nVisibleFix issue #${issue.id}`,
+    });
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E3A8A" />
+      <View style={styles.loader}>
+        <ActivityIndicator color="#0f1012" />
       </View>
     );
   }
 
   if (!issue) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Sorun bulunamadı</Text>
+      <View style={styles.loader}>
+        <Text style={styles.errorText}>Issue not found.</Text>
       </View>
     );
   }
 
-  const timeline = [
-    { status: 'reported', date: issue.reportedAt, label: 'Bildirildi' },
-    ...(issue.acknowledgedAt ? [{ status: 'acknowledged', date: issue.acknowledgedAt, label: 'İnceleniyor' }] : []),
-    ...(issue.inProgressAt ? [{ status: 'in_progress', date: issue.inProgressAt, label: 'Çalışılıyor' }] : []),
-    ...(issue.resolvedAt ? [{ status: 'resolved', date: issue.resolvedAt, label: 'Çözüldü' }] : []),
-    ...(issue.rejectedAt ? [{ status: 'rejected', date: issue.rejectedAt, label: 'Reddedildi' }] : []),
-  ];
-
   return (
-    <ScrollView style={styles.container}>
-      {issue.imageUrl && (
-        <Image source={{ uri: issue.imageUrl }} style={styles.heroImage} />
-      )}
-      
-      <View style={styles.content}>
-        <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[issue.status] }]}>
-          <Text style={styles.statusText}>{ISSUE_STATUS_LABELS[issue.status]}</Text>
-        </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {issue.imageUrl ? <Image source={{ uri: issue.imageUrl }} style={styles.heroImage} /> : null}
 
+      <View style={styles.card}>
+        <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[issue.status] }]}>
+          <Text style={styles.statusBadgeText}>{ISSUE_STATUS_LABELS[issue.status]}</Text>
+        </View>
         <Text style={styles.category}>{ISSUE_CATEGORY_LABELS[issue.category]}</Text>
         <Text style={styles.title}>{issue.title}</Text>
-        
-        {issue.description && (
-          <Text style={styles.description}>{issue.description}</Text>
-        )}
+        {issue.description ? <Text style={styles.description}>{issue.description}</Text> : null}
+        <Text style={styles.meta}>
+          {issue.address || 'No precise address'} • {issue.latitude.toFixed(5)}, {issue.longitude.toFixed(5)}
+        </Text>
+      </View>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.meta}>📍 {issue.address || 'Konum belirtilmemiş'}</Text>
-          <Text style={styles.meta}>📅 {new Date(issue.reportedAt).toLocaleDateString('tr-TR')}</Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>Durum Geçmişi</Text>
-        <View style={styles.timeline}>
-          {timeline.map((item, index) => (
-            <View key={item.status} style={styles.timelineItem}>
-              <View style={[styles.timelineDot, { backgroundColor: STATUS_COLORS[item.status as keyof typeof STATUS_COLORS] }]} />
-              {index < timeline.length - 1 && <View style={styles.timelineLine} />}
-              <View style={styles.timelineContent}>
-                <Text style={styles.timelineLabel}>{item.label}</Text>
-                <Text style={styles.timelineDate}>
-                  {new Date(item.date).toLocaleDateString('tr-TR')}
-                </Text>
-              </View>
+      <View style={styles.card}>
+        <Text style={styles.sectionLabel}>Status timeline</Text>
+        {timeline.map((entry, index) => (
+          <View key={entry.key} style={styles.timelineRow}>
+            <View style={[styles.timelineDot, { backgroundColor: entry.color }]} />
+            <View style={styles.timelineContent}>
+              <Text style={styles.timelineLabel}>{entry.label}</Text>
+              <Text style={styles.timelineDate}>{new Date(entry.date).toLocaleDateString('tr-TR')}</Text>
             </View>
-          ))}
-        </View>
+            {index < timeline.length - 1 ? <View style={styles.timelineConnector} /> : null}
+          </View>
+        ))}
+      </View>
 
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={[styles.upvoteButton, hasUpvoted && styles.upvoteButtonActive]}
-            onPress={handleUpvote}
-            disabled={hasUpvoted || upvoting}
-          >
-            <Text style={styles.upvoteButtonText}>
-              {hasUpvoted ? '✓ ' : '👍 '}
-              {issue.upvoteCount} Destek
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-            <Text style={styles.shareButtonText}>📤 Paylaş</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.actions}>
+        <TouchableOpacity style={[styles.primaryButton, hasUpvoted && styles.disabledButton]} disabled={hasUpvoted || upvoting} onPress={() => void handleUpvote()}>
+          <Text style={styles.primaryButtonText}>{hasUpvoted ? `Supported (${issue.upvoteCount})` : `Support (${issue.upvoteCount})`}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => void handleShare()}>
+          <Text style={styles.secondaryButtonText}>Share</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { fontSize: 16, color: '#EF4444' },
-  heroImage: { width: '100%', height: 250, backgroundColor: '#F3F4F6' },
-  content: { padding: 16 },
-  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 12 },
-  statusText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  category: { fontSize: 14, color: '#6B7280', marginBottom: 4 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#1F2937', marginBottom: 12 },
-  description: { fontSize: 16, color: '#4B5563', lineHeight: 24, marginBottom: 16 },
-  metaRow: { marginBottom: 24 },
-  meta: { fontSize: 14, color: '#6B7280', marginBottom: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937', marginBottom: 12 },
-  timeline: { marginBottom: 24 },
-  timelineItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  timelineDot: { width: 12, height: 12, borderRadius: 6, marginTop: 4 },
-  timelineLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginLeft: 5, marginTop: 6 },
-  timelineContent: { marginLeft: 12, flex: 1 },
-  timelineLabel: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
-  timelineDate: { fontSize: 12, color: '#6B7280' },
-  actionRow: { flexDirection: 'row', gap: 12, marginBottom: 40 },
-  upvoteButton: { flex: 1, backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12, alignItems: 'center' },
-  upvoteButtonActive: { backgroundColor: '#1E3A8A' },
-  upvoteButtonText: { fontSize: 16, fontWeight: '600', color: '#1F2937' },
-  shareButton: { flex: 1, backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12, alignItems: 'center' },
-  shareButtonText: { fontSize: 16, fontWeight: '600', color: '#1F2937' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f3f3f1',
+  },
+  content: {
+    padding: 12,
+    gap: 10,
+    paddingBottom: 24,
+  },
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f3f1',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#b42318',
+  },
+  heroImage: {
+    width: '100%',
+    height: 220,
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+  },
+  card: {
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+    backgroundColor: '#ffffff',
+    padding: 12,
+    gap: 8,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  category: {
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: '#6d7078',
+    fontWeight: '700',
+  },
+  title: {
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '800',
+    color: '#0c0c0d',
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4f535b',
+  },
+  meta: {
+    fontSize: 12,
+    color: '#4f535b',
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: '#6d7078',
+  },
+  timelineRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    position: 'relative',
+    paddingBottom: 8,
+  },
+  timelineDot: {
+    width: 10,
+    height: 10,
+    marginTop: 5,
+  },
+  timelineContent: {
+    marginLeft: 10,
+    gap: 2,
+  },
+  timelineLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0c0c0d',
+  },
+  timelineDate: {
+    fontSize: 12,
+    color: '#4f535b',
+  },
+  timelineConnector: {
+    position: 'absolute',
+    left: 4,
+    top: 14,
+    width: 1,
+    height: 14,
+    backgroundColor: 'rgba(12,12,13,0.2)',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  primaryButton: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: '#0f1012',
+    backgroundColor: '#0f1012',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: 'rgba(12,12,13,0.14)',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  secondaryButtonText: {
+    color: '#0f1012',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });

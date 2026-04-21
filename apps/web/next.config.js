@@ -3,7 +3,7 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { composePlugins, withNx } = require('@nx/next');
 
-const configuredApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8031/api/v1';
+const configuredApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8030/api/v1';
 const apiOrigin = configuredApiBase.replace(/\/api\/v1\/?$/, '');
 
 /**

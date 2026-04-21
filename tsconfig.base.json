@@ -15,6 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["apps/web/src/*"],
       "@visiblefix/database": ["libs/database/src/index.ts"],
       "@visiblefix/database/schema": ["libs/database/src/schema.ts"],
       "@visiblefix/shared/types": ["libs/shared/types/src/index.ts"]

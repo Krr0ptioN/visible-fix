@@ -1,27 +1,28 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import type { CreateIssueInput, IssueCategory } from '@visiblefix/shared/types';
+import { useI18n } from '@/components/i18n-provider';
+import { GoogleMapComponent as GoogleMap } from '@/components/google-map';
+import { MediaUpload, type MediaItem } from '@/components/media-upload';
+import { SiteShell } from '@/components/site-shell';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, SectionEyebrow, Textarea, cn } from '@/components/ui';
 
 const API_BASE_URL = '/api/v1';
+const ISTANBUL_CENTER = { latitude: 41.0082, longitude: 28.9784 };
+const ISTANBUL_BOUNDS = {
+  north: 41.35,
+  south: 40.8,
+  west: 28.45,
+  east: 29.4,
+};
 
-const CATEGORIES: Array<{ key: IssueCategory; label: string }> = [
-  { key: 'pothole', label: 'Pothole' },
-  { key: 'streetlight', label: 'Street light' },
-  { key: 'waste', label: 'Waste' },
-  { key: 'sidewalk', label: 'Sidewalk' },
-  { key: 'water_leak', label: 'Water leak' },
-  { key: 'accessibility', label: 'Accessibility' },
-  { key: 'other', label: 'Other' },
-];
+const CATEGORIES: IssueCategory[] = ['pothole', 'streetlight', 'waste', 'sidewalk', 'water_leak', 'accessibility', 'other'];
 
 type SubmitState = 'idle' | 'loading' | 'success' | 'error';
 
 const createDeviceId = () => {
-  if (typeof window === 'undefined') {
-    return 'web-anonymous';
-  }
+  if (typeof window === 'undefined') return 'web-anonymous';
 
   const existing = window.localStorage.getItem('visiblefix-device-id');
   if (existing) return existing;
@@ -32,11 +33,12 @@ const createDeviceId = () => {
 };
 
 export default function ReportPage() {
+  const { t, categoryLabel } = useI18n();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<IssueCategory>('other');
   const [imageUrl, setImageUrl] = useState('');
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [deviceId, setDeviceId] = useState('web-anonymous');
@@ -48,24 +50,29 @@ export default function ReportPage() {
     setDeviceId(createDeviceId());
   }, []);
 
-  const imagePreviewUrl = useMemo(() => {
-    if (!selectedImage) return null;
-    return URL.createObjectURL(selectedImage);
-  }, [selectedImage]);
-
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) {
-        URL.revokeObjectURL(imagePreviewUrl);
-      }
-    };
-  }, [imagePreviewUrl]);
+  const pickedLocation = useMemo(() => {
+    const parsedLat = Number(latitude);
+    const parsedLng = Number(longitude);
+    if (Number.isNaN(parsedLat) || Number.isNaN(parsedLng)) return null;
+    return { latitude: parsedLat, longitude: parsedLng };
+  }, [latitude, longitude]);
 
   const canSubmit = title.trim().length > 0 && latitude.trim().length > 0 && longitude.trim().length > 0;
 
+  const setIstanbulFallback = () => {
+    setLatitude(ISTANBUL_CENTER.latitude.toFixed(6));
+    setLongitude(ISTANBUL_CENTER.longitude.toFixed(6));
+  };
+
+  const clampToIstanbul = (lat: number, lng: number) => ({
+    latitude: Math.min(Math.max(lat, ISTANBUL_BOUNDS.south), ISTANBUL_BOUNDS.north),
+    longitude: Math.min(Math.max(lng, ISTANBUL_BOUNDS.west), ISTANBUL_BOUNDS.east),
+  });
+
   const requestLocation = async () => {
     if (!navigator.geolocation) {
-      setErrorMessage('Geolocation is not available in this browser. Please enter coordinates manually.');
+      setIstanbulFallback();
+      setErrorMessage(t('Geolocation is not available. Defaulted to Istanbul center; adjust on the map if needed.'));
       return;
     }
 
@@ -74,12 +81,15 @@ export default function ReportPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLatitude(position.coords.latitude.toFixed(6));
-        setLongitude(position.coords.longitude.toFixed(6));
+        const clamped = clampToIstanbul(position.coords.latitude, position.coords.longitude);
+        setLatitude(clamped.latitude.toFixed(6));
+        setLongitude(clamped.longitude.toFixed(6));
         setLocationLoading(false);
       },
-      () => {
-        setErrorMessage('Unable to fetch your location. Please enter coordinates manually.');
+      (error) => {
+        setIstanbulFallback();
+        const reason = error.code === 1 ? t('Location permission was denied.') : t('Unable to fetch your current location.');
+        setErrorMessage(t('{reason} Defaulted to Istanbul center; adjust on the map if needed.', { reason }));
         setLocationLoading(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -90,7 +100,7 @@ export default function ReportPage() {
     event.preventDefault();
 
     if (!canSubmit) {
-      setErrorMessage('Please complete title and location fields.');
+      setErrorMessage(t('Please complete title and location fields.'));
       return;
     }
 
@@ -98,7 +108,17 @@ export default function ReportPage() {
     const parsedLng = Number(longitude);
 
     if (Number.isNaN(parsedLat) || Number.isNaN(parsedLng)) {
-      setErrorMessage('Latitude and longitude must be valid numbers.');
+      setErrorMessage(t('Latitude and longitude must be valid numbers.'));
+      return;
+    }
+
+    if (
+      parsedLat < ISTANBUL_BOUNDS.south ||
+      parsedLat > ISTANBUL_BOUNDS.north ||
+      parsedLng < ISTANBUL_BOUNDS.west ||
+      parsedLng > ISTANBUL_BOUNDS.east
+    ) {
+      setErrorMessage(t('This deployment accepts report locations in Istanbul bounds only.'));
       return;
     }
 
@@ -118,15 +138,13 @@ export default function ReportPage() {
     try {
       const response = await fetch(`${API_BASE_URL}/issues`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(body?.message || 'Failed to submit report.');
+        throw new Error(body?.message || t('Failed to submit report.'));
       }
 
       setSubmitState('success');
@@ -134,149 +152,148 @@ export default function ReportPage() {
       setDescription('');
       setCategory('other');
       setImageUrl('');
-      setSelectedImage(null);
+      setMediaItems([]);
       setLatitude('');
       setLongitude('');
     } catch (error) {
       setSubmitState('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Unexpected error during submission.');
+      setErrorMessage(error instanceof Error ? error.message : t('Unexpected error during submission.'));
     }
   };
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-3xl px-6 py-10 text-slate-900">
-      <Link href="/" className="text-sm font-medium text-blue-700 hover:text-blue-800">
-        ← Back to home
-      </Link>
+    <SiteShell activePage="report">
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Card>
+          <CardHeader>
+            <SectionEyebrow>{t('Citizen intake')}</SectionEyebrow>
+            <CardTitle className="mt-3 text-4xl">{t('Report an issue with less friction and more precision.')}</CardTitle>
+            <CardDescription>
+              {t('Use the map or your current GPS position, attach optional evidence, and send a cleaner record into the public issue workflow.')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-8" onSubmit={onSubmit}>
+              <section className="space-y-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('1. Category')}</p>
+                  <div className="mt-3 grid gap-px border border-border bg-border sm:grid-cols-2">
+                    {CATEGORIES.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => setCategory(item)}
+                        className={cn(
+                          'min-h-11 bg-card px-4 text-left text-sm font-medium transition',
+                          category === item ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                        )}
+                      >
+                        {categoryLabel(item)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-      <h1 className="mt-4 text-3xl font-bold tracking-tight">Report an issue</h1>
-      <p className="mt-2 text-slate-600">Attach a photo, set location, and submit directly to the `/api/v1/issues` endpoint.</p>
+                <div className="grid gap-4">
+                  <label className="grid gap-2 text-sm font-medium text-foreground">
+                    {t('Title')}
+                    <Input
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder={t('Large pothole near bus stop')}
+                      maxLength={255}
+                      required
+                    />
+                  </label>
 
-      <form className="mt-8 space-y-8" onSubmit={onSubmit}>
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">1) Photo (camera or gallery)</h2>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(event) => setSelectedImage(event.target.files?.[0] ?? null)}
-            className="block w-full rounded-md border border-slate-300 p-2 text-sm"
-          />
-          {imagePreviewUrl ? (
-            <img src={imagePreviewUrl} alt="Selected issue preview" className="h-56 w-full rounded-md object-cover" />
-          ) : (
-            <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
-              No photo selected yet.
-            </div>
-          )}
-          <label className="block text-sm font-medium text-slate-700">
-            Optional image URL (used by API for now)
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(event) => setImageUrl(event.target.value)}
-              placeholder="https://example.com/photo.jpg"
-              className="mt-1 block w-full rounded-md border border-slate-300 p-2"
-            />
-          </label>
-        </section>
+                  <label className="grid gap-2 text-sm font-medium text-foreground">
+                    {t('Description')}
+                    <Textarea
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder={t('What should municipal teams know before they arrive?')}
+                      maxLength={2000}
+                    />
+                  </label>
+                </div>
+              </section>
 
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">2) Location (GPS + manual fallback)</h2>
-          <button
-            type="button"
-            onClick={requestLocation}
-            disabled={locationLoading}
-            className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {locationLoading ? 'Getting location…' : 'Use my current location'}
-          </button>
+              <section className="space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('2. Media evidence')}</p>
+                <MediaUpload value={mediaItems} onChange={setMediaItems} />
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium text-slate-700">
-              Latitude
-              <input
-                type="text"
-                value={latitude}
-                onChange={(event) => setLatitude(event.target.value)}
-                placeholder="40.987654"
-                className="mt-1 block w-full rounded-md border border-slate-300 p-2"
+                <label className="grid gap-2 text-sm font-medium text-foreground">
+                  {t('Optional hosted asset URL')}
+                  <Input
+                    type="url"
+                    value={imageUrl}
+                    onChange={(event) => setImageUrl(event.target.value)}
+                    placeholder={t('https://example.com/evidence.jpg')}
+                  />
+                </label>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {t(
+                    'The current API persists `imageUrl` only. Uploaded media is fully previewable and removable in the UI now; wiring binary upload to storage is the next backend step.'
+                  )}
+                </p>
+              </section>
+
+              <section className="space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('3. Submit')}</p>
+                <div className="flex flex-wrap gap-3">
+                  <Button type="submit" disabled={submitState === 'loading'}>
+                    {submitState === 'loading' ? t('Submitting…') : t('Submit issue')}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={requestLocation} disabled={locationLoading}>
+                    {locationLoading ? t('Getting location…') : t('Use current location')}
+                  </Button>
+                </div>
+
+                {submitState === 'success' ? (
+                  <div className="border border-[#12b76a] bg-[#ecfdf3] px-4 py-3 text-sm text-[#067647]">{t('Report submitted successfully.')}</div>
+                ) : null}
+                {(submitState === 'error' || errorMessage) && (
+                  <div className="border border-[#fda29b] bg-[#fef3f2] px-4 py-3 text-sm text-[#b42318]">{errorMessage}</div>
+                )}
+              </section>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-6">
+          <Card>
+            <CardHeader>
+              <SectionEyebrow>{t('Spatial input')}</SectionEyebrow>
+              <CardTitle className="mt-3 text-3xl">{t('Pick the exact location.')}</CardTitle>
+              <CardDescription>
+                {t('Click directly on the map to set coordinates, or use device geolocation for a faster starting point.')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <GoogleMap
+                mode="picker"
+                pickedLocation={pickedLocation}
+                onPickLocation={(coordinate) => {
+                  setLatitude(String(coordinate.latitude));
+                  setLongitude(String(coordinate.longitude));
+                }}
+                className="border-0 shadow-none"
+                heightClassName="h-[380px]"
               />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Longitude
-              <input
-                type="text"
-                value={longitude}
-                onChange={(event) => setLongitude(event.target.value)}
-                placeholder="29.123456"
-                className="mt-1 block w-full rounded-md border border-slate-300 p-2"
-              />
-            </label>
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">3) Issue details</h2>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setCategory(item.key)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  category === item.key ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <label className="block text-sm font-medium text-slate-700">
-            Title
-            <input
-              type="text"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="e.g. Large pothole near bus stop"
-              className="mt-1 block w-full rounded-md border border-slate-300 p-2"
-              maxLength={255}
-              required
-            />
-          </label>
-
-          <label className="block text-sm font-medium text-slate-700">
-            Description (optional)
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Add useful context for municipal teams"
-              className="mt-1 block min-h-28 w-full rounded-md border border-slate-300 p-2"
-              maxLength={2000}
-            />
-          </label>
-        </section>
-
-        <section className="space-y-3">
-          <button
-            type="submit"
-            disabled={submitState === 'loading'}
-            className="rounded-md bg-blue-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitState === 'loading' ? 'Submitting…' : 'Submit issue'}
-          </button>
-
-          {submitState === 'success' && (
-            <p className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-              Report submitted successfully.
-            </p>
-          )}
-          {(submitState === 'error' || errorMessage) && (
-            <p className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{errorMessage}</p>
-          )}
-        </section>
-      </form>
-    </main>
+              <div className="grid gap-px border border-border bg-border sm:grid-cols-2">
+                <div className="bg-card p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('Latitude')}</p>
+                  <Input value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="40.987654" className="mt-3" />
+                </div>
+                <div className="bg-card p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('Longitude')}</p>
+                  <Input value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="29.123456" className="mt-3" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    </SiteShell>
   );
 }

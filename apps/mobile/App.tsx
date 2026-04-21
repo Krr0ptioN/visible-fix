@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DeviceProvider } from './src/hooks/useDevice';
+import { AuthProvider } from './src/hooks/useAuth';
 import AppNavigator from './src/navigation/AppNavigator';
 
 const queryClient = new QueryClient({
@@ -19,8 +20,10 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <DeviceProvider>
-          <StatusBar style="light" />
-          <AppNavigator />
+          <AuthProvider>
+            <StatusBar style="dark" />
+            <AppNavigator />
+          </AuthProvider>
         </DeviceProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

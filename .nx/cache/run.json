@@ -1,0 +1,21 @@
+{
+  "run": {
+    "command": "nx run visiblefix-api:build:development",
+    "startTime": "2026-04-21T11:26:49.520Z",
+    "endTime": "2026-04-21T11:26:49.538Z",
+    "inner": false
+  },
+  "tasks": [
+    {
+      "taskId": "visiblefix-api:build:development",
+      "target": "build",
+      "projectName": "visiblefix-api",
+      "hash": "14081169534557854424",
+      "startTime": "2026-04-21T11:26:49.533Z",
+      "endTime": "2026-04-21T11:26:49.537Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    }
+  ]
+}
