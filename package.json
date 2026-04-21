@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "setup:dev": "bash scripts/setup-dev-env.sh",
     "dev:web": "nx serve web",
     "dev:api": "nx serve visiblefix-api",
     "dev:mobile": "cd apps/mobile && npx expo start",
@@ -16,7 +17,8 @@
     "infra:ps": "bash infra/compose-runner.sh ps",
     "db:push": "drizzle-kit push --config drizzle.config.ts",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
-    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts"
+    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
+    "db:seed:dev": "node scripts/seed-dev.mjs"
   },
   "devDependencies": {
     "@nx/nest": "^22.6.4",

@@ -1,0 +1,212 @@
+{
+  "municipalities": [
+    {
+      "id": 1,
+      "name": "Istanbul Metropolitan Municipality",
+      "code": "IST-001",
+      "region": "Marmara",
+      "province": "Istanbul",
+      "population": 15519267,
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Kadikoy Municipality",
+      "code": "IST-347",
+      "region": "Marmara",
+      "province": "Istanbul",
+      "population": 485233,
+      "active": true
+    }
+  ],
+  "users": [
+    {
+      "email": "admin@visiblefix.local",
+      "name": "VisibleFix Admin",
+      "role": "admin",
+      "password": "admin12345",
+      "municipalityCode": null,
+      "isActive": true
+    },
+    {
+      "email": "staff@visiblefix.local",
+      "name": "Municipal Staff",
+      "role": "municipal_staff",
+      "password": "staff12345",
+      "municipalityCode": "IST-001",
+      "isActive": true
+    },
+    {
+      "email": "citizen@visiblefix.local",
+      "name": "Demo Citizen",
+      "role": "citizen",
+      "password": "citizen12345",
+      "municipalityCode": null,
+      "isActive": true
+    }
+  ],
+  "issues": [
+    {
+      "id": 1001,
+      "title": "Large pothole at Besiktas bus lane",
+      "description": "Right lane has a deep pothole causing buses to slow down suddenly.",
+      "category": "pothole",
+      "status": "reported",
+      "imageUrl": null,
+      "latitude": 41.0431,
+      "longitude": 29.0053,
+      "address": "Barbaros Bulvari, Besiktas",
+      "municipalityCode": "IST-001",
+      "reporterEmail": "citizen@visiblefix.local",
+      "deviceId": "device-seed-001",
+      "acknowledgedAt": null,
+      "inProgressAt": null,
+      "resolvedAt": null,
+      "rejectedAt": null,
+      "rejectReason": null,
+      "createdAt": "2026-04-12T09:15:00.000Z"
+    },
+    {
+      "id": 1002,
+      "title": "Streetlight outage near Moda shoreline",
+      "description": "Three adjacent streetlights have been off for two nights.",
+      "category": "streetlight",
+      "status": "acknowledged",
+      "imageUrl": null,
+      "latitude": 40.9814,
+      "longitude": 29.0322,
+      "address": "Moda Caddesi, Kadikoy",
+      "municipalityCode": "IST-347",
+      "reporterEmail": "citizen@visiblefix.local",
+      "deviceId": "device-seed-002",
+      "acknowledgedAt": "2026-04-13T06:20:00.000Z",
+      "inProgressAt": null,
+      "resolvedAt": null,
+      "rejectedAt": null,
+      "rejectReason": null,
+      "createdAt": "2026-04-12T19:55:00.000Z"
+    },
+    {
+      "id": 1003,
+      "title": "Overflowing waste bins in Fatih square",
+      "description": "Waste bins were not collected and overflowed onto the pavement.",
+      "category": "waste",
+      "status": "in_progress",
+      "imageUrl": null,
+      "latitude": 41.0169,
+      "longitude": 28.9497,
+      "address": "Fatih Aniti, Fatih",
+      "municipalityCode": "IST-001",
+      "reporterEmail": "citizen@visiblefix.local",
+      "deviceId": "device-seed-003",
+      "acknowledgedAt": "2026-04-11T09:00:00.000Z",
+      "inProgressAt": "2026-04-11T12:00:00.000Z",
+      "resolvedAt": null,
+      "rejectedAt": null,
+      "rejectReason": null,
+      "createdAt": "2026-04-11T07:40:00.000Z"
+    },
+    {
+      "id": 1004,
+      "title": "Broken tactile paving at Sisli crossing",
+      "description": "Accessibility tiles are broken and missing near pedestrian crossing.",
+      "category": "accessibility",
+      "status": "resolved",
+      "imageUrl": null,
+      "latitude": 41.0603,
+      "longitude": 28.9871,
+      "address": "Halaskargazi Caddesi, Sisli",
+      "municipalityCode": "IST-001",
+      "reporterEmail": "citizen@visiblefix.local",
+      "deviceId": "device-seed-004",
+      "acknowledgedAt": "2026-04-08T08:30:00.000Z",
+      "inProgressAt": "2026-04-08T14:10:00.000Z",
+      "resolvedAt": "2026-04-09T17:45:00.000Z",
+      "rejectedAt": null,
+      "rejectReason": null,
+      "createdAt": "2026-04-08T07:25:00.000Z"
+    },
+    {
+      "id": 1005,
+      "title": "Water leak under Galata bridge walkway",
+      "description": "Continuous leak creating slippery surface on pedestrian route.",
+      "category": "water_leak",
+      "status": "in_progress",
+      "imageUrl": null,
+      "latitude": 41.0227,
+      "longitude": 28.9722,
+      "address": "Galata Koprusu, Beyoglu",
+      "municipalityCode": "IST-001",
+      "reporterEmail": "citizen@visiblefix.local",
+      "deviceId": "device-seed-005",
+      "acknowledgedAt": "2026-04-10T08:45:00.000Z",
+      "inProgressAt": "2026-04-10T11:20:00.000Z",
+      "resolvedAt": null,
+      "rejectedAt": null,
+      "rejectReason": null,
+      "createdAt": "2026-04-10T06:55:00.000Z"
+    },
+    {
+      "id": 1006,
+      "title": "Sidewalk obstruction reported as duplicate",
+      "description": "Temporary barriers already covered in another active incident.",
+      "category": "sidewalk",
+      "status": "rejected",
+      "imageUrl": null,
+      "latitude": 41.0352,
+      "longitude": 28.9947,
+      "address": "Nisantasi, Sisli",
+      "municipalityCode": "IST-001",
+      "reporterEmail": "citizen@visiblefix.local",
+      "deviceId": "device-seed-006",
+      "acknowledgedAt": "2026-04-09T10:10:00.000Z",
+      "inProgressAt": null,
+      "resolvedAt": null,
+      "rejectedAt": "2026-04-09T15:20:00.000Z",
+      "rejectReason": "Duplicate report linked to existing maintenance ticket.",
+      "createdAt": "2026-04-09T08:50:00.000Z"
+    }
+  ],
+  "upvotes": [
+    {
+      "issueId": 1001,
+      "deviceId": "device-alpha",
+      "createdAt": "2026-04-12T09:30:00.000Z"
+    },
+    {
+      "issueId": 1001,
+      "deviceId": "device-beta",
+      "createdAt": "2026-04-12T10:45:00.000Z"
+    },
+    {
+      "issueId": 1002,
+      "deviceId": "device-charlie",
+      "createdAt": "2026-04-13T08:15:00.000Z"
+    },
+    {
+      "issueId": 1003,
+      "deviceId": "device-delta",
+      "createdAt": "2026-04-11T13:10:00.000Z"
+    },
+    {
+      "issueId": 1003,
+      "deviceId": "device-echo",
+      "createdAt": "2026-04-11T14:05:00.000Z"
+    },
+    {
+      "issueId": 1004,
+      "deviceId": "device-foxtrot",
+      "createdAt": "2026-04-08T16:00:00.000Z"
+    },
+    {
+      "issueId": 1005,
+      "deviceId": "device-gamma",
+      "createdAt": "2026-04-10T12:40:00.000Z"
+    },
+    {
+      "issueId": 1005,
+      "deviceId": "device-hotel",
+      "createdAt": "2026-04-10T13:50:00.000Z"
+    }
+  ]
+}
