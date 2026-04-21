@@ -37,6 +37,8 @@ resource "google_sql_database_instance" "postgres" {
   }
 
   deletion_protection = false # Set to true for production
+
+  depends_on = [google_project_service.sql_admin_api]
 }
 
 resource "google_sql_database" "database" {
@@ -68,6 +70,8 @@ resource "google_cloud_run_v2_service" "api" {
   name     = "visiblefix-api"
   location = "us-central1"
   project  = var.google_project_id
+
+  deletion_protection = false
 
   template {
     containers {
@@ -105,6 +109,7 @@ resource "google_cloud_run_v2_service_iam_member" "noauth" {
   member   = "allUsers"
 }
 
+
 variable "db_password" {
   type        = string
   description = "The password for the database user"
@@ -118,3 +123,4 @@ output "api_url" {
 output "db_host" {
   value = google_sql_database_instance.postgres.public_ip_address
 }
+
