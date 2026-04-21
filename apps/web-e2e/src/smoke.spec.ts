@@ -1,27 +1,41 @@
 import { test, expect } from '@playwright/test';
 
+const BASE_URL = process.env['BASE_URL'] || 'http://localhost:3001';
+
+test.beforeEach(async ({ context }) => {
+  await context.addCookies([
+    {
+      name: 'vf_locale',
+      value: 'en',
+      url: BASE_URL,
+      path: '/',
+      sameSite: 'Lax',
+    },
+  ]);
+});
+
 test('home page exposes main entry points', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Report city issues');
-  await expect(page.getByRole('link', { name: 'Start a report' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Browse issues' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Admin console' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open report intake' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'View issue grid' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open operations' })).toBeVisible();
 });
 
 test('report page renders required controls', async ({ page }) => {
   await page.goto('/report');
 
-  await expect(page.getByRole('heading', { name: 'Report an issue' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Use my current location' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Report an issue with less friction and more precision.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Use current location' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Submit issue' })).toBeVisible();
 });
 
-test('admin page renders token + status management shell', async ({ page }) => {
+test('admin route redirects unauthenticated users to sign-in', async ({ page }) => {
   await page.goto('/admin');
 
-  await expect(page.getByRole('heading', { name: 'Admin status management' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Save token' })).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin$/);
+  await expect(page.getByRole('heading', { name: 'Access your account.' })).toBeVisible();
 });
 
 test('issue detail timeline and upvote interaction work with API responses', async ({ page }) => {
