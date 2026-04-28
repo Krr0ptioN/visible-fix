@@ -1,0 +1,12 @@
+[project]
+name = "visiblefix-market-research"
+version = "0.1.0"
+description = "VisibleFix market research and analysis notebook"
+requires-python = ">=3.11"
+dependencies = [
+    "marimo>=0.22.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+]
+
+[tool.uv]

@@ -1,0 +1,87 @@
+direction: right
+
+title: "VisibleFix Architecture"
+
+clients: {
+  label: "Clients"
+  style: {
+    fill: "#E8F3FF"
+    stroke: "#2D6CDF"
+  }
+  web_user: "Web User\n(Browser)"
+  mobile_user: "Mobile User\n(Expo / React Native)"
+}
+
+runtime: {
+  label: "Runtime"
+  style: {
+    fill: "#EEF8EE"
+    stroke: "#2F8F46"
+  }
+  vercel_web: "Vercel\nNext.js (apps/web)"
+  cloud_run_api: "Cloud Run\nNestJS API (apps/api)"
+}
+
+data: {
+  label: "Data + Storage"
+  style: {
+    fill: "#FFF5E8"
+    stroke: "#D9822B"
+  }
+  postgres: "PostgreSQL\nCloud SQL / local docker"
+  object_storage: "Object Storage\nLocal | MinIO | GCS"
+}
+
+obs: {
+  label: "Observability"
+  style: {
+    fill: "#F4F4F4"
+    stroke: "#666666"
+  }
+  pino: "pino logger\n(request ids + redaction)"
+  otel: "OpenTelemetry SDK\nOTLP exporter"
+  collector: "OTel Collector"
+  prometheus: "Prometheus"
+  loki: "Loki"
+  tempo: "Tempo"
+  grafana: "Grafana"
+  google_obs: "Google Observability\nCloud Logging/Trace/Monitoring"
+}
+
+cicd: {
+  label: "CI/CD"
+  style: {
+    fill: "#F7EEFF"
+    stroke: "#7A4DB6"
+  }
+  gha: "GitHub Actions"
+  cd_web: "cd-web.yml"
+  cd_api: "cd-api.yml"
+}
+
+web_user -> vercel_web: "HTTPS"
+mobile_user -> cloud_run_api: "HTTPS /api/v1"
+vercel_web -> cloud_run_api: "rewrite /api/v1/*"
+cloud_run_api -> postgres: "Drizzle ORM"
+cloud_run_api -> object_storage: "evidence uploads"
+
+cloud_run_api -> pino: "structured logs"
+cloud_run_api -> otel: "traces"
+cloud_run_api -> prometheus: "metrics endpoint"
+otel -> collector: "OTLP"
+collector -> tempo: "traces"
+pino -> loki: "optional transport"
+prometheus -> cloud_run_api: "scrape /api/v1/metrics"
+
+grafana -> prometheus
+grafana -> loki
+grafana -> tempo
+
+collector -> google_obs: "optional prod export"
+pino -> google_obs: "Cloud Run stdout"
+prometheus -> google_obs: "managed metrics path"
+
+gha -> cd_web
+gha -> cd_api
+cd_web -> vercel_web: "deploy"
+cd_api -> cloud_run_api: "container deploy"
