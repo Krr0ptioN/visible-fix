@@ -6,31 +6,35 @@
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { mkdirSync } from 'node:fs';
+import { isAbsolute, join } from 'node:path';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app/app.module';
-import appConfig from './app/app.config';
 import { initializeTelemetry, shutdownTelemetry } from './telemetry';
 
 async function bootstrap() {
-  const config = appConfig();
-  await initializeTelemetry(config.telemetry);
+  await initializeTelemetry();
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule.register(config), { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
   app.enableShutdownHooks();
 
   const logger = app.get(Logger);
-  app.setGlobalPrefix(config.globalPrefix);
+  const globalPrefix = 'api/v1';
+  app.setGlobalPrefix(globalPrefix);
 
-  if (config.objectStorage.provider === 'local') {
-    mkdirSync(config.objectStorage.localRootDir, { recursive: true });
-    app.useStaticAssets(config.objectStorage.localRootDir, { prefix: '/uploads/' });
-    logger.log(`Local object storage served at /uploads (${config.objectStorage.localRootDir})`);
+  const objectStorageProvider = (process.env.OBJECT_STORAGE_PROVIDER ?? 'local').toLowerCase();
+  if (objectStorageProvider === 'local') {
+    const configuredRoot = process.env.LOCAL_OBJECT_STORAGE_ROOT ?? 'storage';
+    const localStorageRoot = isAbsolute(configuredRoot) ? configuredRoot : join(process.cwd(), configuredRoot);
+    mkdirSync(localStorageRoot, { recursive: true });
+    app.useStaticAssets(localStorageRoot, { prefix: '/uploads/' });
+    logger.log(`Local object storage served at /uploads (${localStorageRoot})`);
   }
 
-  await app.listen(config.port);
-  logger.log(`Application is running on: http://localhost:${config.port}/${config.globalPrefix}`);
+  const port = process.env.API_PORT || 8030;
+  await app.listen(port);
+  logger.log(`Application is running on: http://localhost:${port}/${globalPrefix}`);
 
   let shuttingDown = false;
   const handleSignal = async () => {

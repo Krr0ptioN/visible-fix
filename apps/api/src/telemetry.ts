@@ -2,37 +2,37 @@ import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { NodeSDK } from '@opentelemetry/sdk-node';
-import type { ApplicationBootstrapOptions } from './app/app.config';
 
 let sdk: NodeSDK | null = null;
 let telemetryInitialized = false;
 
-export async function initializeTelemetry(config: ApplicationBootstrapOptions['telemetry']) {
+export async function initializeTelemetry() {
   if (telemetryInitialized) {
     return;
   }
 
   telemetryInitialized = true;
 
-  if (config.disabled) {
+  if ((process.env.OTEL_SDK_DISABLED ?? 'false').toLowerCase() === 'true') {
     return;
   }
 
-  if (config.logLevel !== 'none') {
+  if ((process.env.OTEL_LOG_LEVEL ?? 'none').toLowerCase() !== 'none') {
+    const level = (process.env.OTEL_LOG_LEVEL ?? 'info').toLowerCase();
     diag.setLogger(new DiagConsoleLogger(), {
       debug: DiagLogLevel.DEBUG,
       info: DiagLogLevel.INFO,
       warn: DiagLogLevel.WARN,
       error: DiagLogLevel.ERROR,
-    }[config.logLevel] ?? DiagLogLevel.INFO);
+    }[level] ?? DiagLogLevel.INFO);
   }
 
   const traceExporter = new OTLPTraceExporter({
-    url: config.tracesEndpoint,
+    url: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://localhost:4318/v1/traces',
   });
 
   sdk = new NodeSDK({
-    serviceName: config.serviceName,
+    serviceName: process.env.OTEL_SERVICE_NAME ?? 'visiblefix-api',
     traceExporter,
     instrumentations: [
       getNodeAutoInstrumentations({
@@ -52,3 +52,4 @@ export async function shutdownTelemetry() {
   sdk = null;
   telemetryInitialized = false;
 }
+
