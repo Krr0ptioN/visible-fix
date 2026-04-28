@@ -45,11 +45,7 @@ module.exports = withSentryConfig(composedConfig, {
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
   silent: !process.env.CI,
-  webpack: {
-    treeshake: {
-      removeDebugLogging: true,
-    },
-  },
+  disableLogger: true,
   sourcemaps: {
     deleteSourcemapsAfterUpload: true,
   },
