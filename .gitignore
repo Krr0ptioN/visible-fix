@@ -156,3 +156,7 @@ override.tf.json
 .opencode/
 .planning/
 AGENTS.md
+
+# Local file/object storage artifacts
+storage/
+/docs/project-problem-solution/main.pdf
