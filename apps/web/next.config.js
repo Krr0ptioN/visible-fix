@@ -2,6 +2,8 @@
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { composePlugins, withNx } = require('@nx/next');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { withSentryConfig } = require('@sentry/nextjs');
 
 const configuredApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8030/api/v1';
 const apiOrigin = configuredApiBase.replace(/\/api\/v1\/?$/, '');
@@ -31,4 +33,15 @@ const plugins = [
   withNx,
 ];
 
-module.exports = composePlugins(...plugins)(nextConfig);
+const composedConfig = composePlugins(...plugins)(nextConfig);
+
+module.exports = withSentryConfig(composedConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  disableLogger: true,
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+});
