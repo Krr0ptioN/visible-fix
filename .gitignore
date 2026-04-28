@@ -160,3 +160,4 @@ AGENTS.md
 # Local file/object storage artifacts
 storage/
 /docs/project-problem-solution/main.pdf
+/apps/web/next-env.d.ts
