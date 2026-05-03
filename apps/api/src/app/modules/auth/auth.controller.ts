@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Get, Headers, Post, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Headers, Inject, Post, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { z } from 'zod';
+import { APP_CONFIG, type ApplicationBootstrapOptions } from '../../app.config';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { clearCookie, readCookie, serializeCookie } from '../../common/auth/cookie.util';
 import type { RequestUser } from '../../common/auth/request-user.interface';
@@ -29,7 +30,14 @@ function shouldReturnMobileTokens(platform: string | undefined) {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  private readonly secureCookies: boolean;
+
+  constructor(
+    private readonly authService: AuthService,
+    @Inject(APP_CONFIG) config: ApplicationBootstrapOptions
+  ) {
+    this.secureCookies = config.appEnv === 'production';
+  }
 
   @Post('sign-in')
   async signIn(
@@ -51,8 +59,8 @@ export class AuthController {
     });
 
     response.setHeader('Set-Cookie', [
-      serializeCookie(ACCESS_TOKEN_COOKIE, session.accessToken, { maxAge: session.accessTtlSeconds }),
-      serializeCookie(REFRESH_TOKEN_COOKIE, session.refreshToken, { maxAge: session.refreshTtlSeconds }),
+      serializeCookie(ACCESS_TOKEN_COOKIE, session.accessToken, { maxAge: session.accessTtlSeconds, secure: this.secureCookies }),
+      serializeCookie(REFRESH_TOKEN_COOKIE, session.refreshToken, { maxAge: session.refreshTtlSeconds, secure: this.secureCookies }),
     ]);
 
     const includeMobileTokens = shouldReturnMobileTokens(clientPlatform);
@@ -93,8 +101,8 @@ export class AuthController {
     });
 
     response.setHeader('Set-Cookie', [
-      serializeCookie(ACCESS_TOKEN_COOKIE, session.accessToken, { maxAge: session.accessTtlSeconds }),
-      serializeCookie(REFRESH_TOKEN_COOKIE, session.refreshToken, { maxAge: session.refreshTtlSeconds }),
+      serializeCookie(ACCESS_TOKEN_COOKIE, session.accessToken, { maxAge: session.accessTtlSeconds, secure: this.secureCookies }),
+      serializeCookie(REFRESH_TOKEN_COOKIE, session.refreshToken, { maxAge: session.refreshTtlSeconds, secure: this.secureCookies }),
     ]);
 
     const includeMobileTokens = shouldReturnMobileTokens(clientPlatform);
@@ -138,8 +146,8 @@ export class AuthController {
     });
 
     response.setHeader('Set-Cookie', [
-      serializeCookie(ACCESS_TOKEN_COOKIE, session.accessToken, { maxAge: session.accessTtlSeconds }),
-      serializeCookie(REFRESH_TOKEN_COOKIE, session.refreshToken, { maxAge: session.refreshTtlSeconds }),
+      serializeCookie(ACCESS_TOKEN_COOKIE, session.accessToken, { maxAge: session.accessTtlSeconds, secure: this.secureCookies }),
+      serializeCookie(REFRESH_TOKEN_COOKIE, session.refreshToken, { maxAge: session.refreshTtlSeconds, secure: this.secureCookies }),
     ]);
 
     return {
@@ -171,7 +179,10 @@ export class AuthController {
 
     await this.authService.signOut(refreshToken);
 
-    response.setHeader('Set-Cookie', [clearCookie(ACCESS_TOKEN_COOKIE), clearCookie(REFRESH_TOKEN_COOKIE)]);
+    response.setHeader('Set-Cookie', [
+      clearCookie(ACCESS_TOKEN_COOKIE, { secure: this.secureCookies }),
+      clearCookie(REFRESH_TOKEN_COOKIE, { secure: this.secureCookies }),
+    ]);
 
     return {
       success: true,

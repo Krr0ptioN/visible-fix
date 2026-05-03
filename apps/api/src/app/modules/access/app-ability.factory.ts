@@ -30,6 +30,7 @@ export class AppAbilityFactory {
       return { municipalityId: user.municipalityId };
     }
 
-    return { municipalityId: -1 };
+    // No municipal scope - admin or invalid user
+    return {};
   }
 }

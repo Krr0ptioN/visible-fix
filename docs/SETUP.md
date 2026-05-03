@@ -55,6 +55,42 @@ chmod +x scripts/setup-gcp.sh
 
 ---
 
+## 🎯 2.5. Staging Environment Setup
+
+Before deploying to production, establish a staging environment for end-to-end testing.
+
+### Prerequisites
+- Google Cloud project for staging (e.g., `visiblefix-staging`)
+- Vercel staging project (e.g., `visiblefix-staging`)
+- GitHub secrets configured for staging
+
+### Staging Infrastructure
+```bash
+# Create staging resources
+cd infra
+terraform init
+terraform apply -var-file=staging.tfvars
+```
+
+This creates:
+- Cloud SQL database: `visiblefix_staging`
+- Cloud Run service: `visiblefix-api-staging`
+- Docker images tagged `:staging`
+
+### GitHub Secrets for Staging
+| Secret | Description |
+| :--- | :--- |
+| `VERCEL_STAGING_PROJECT_ID` | Vercel staging project ID |
+| `STAGING_DATABASE_URL` | Staging database connection |
+| `STAGING_GOOGLE_PROJECT_ID` | Staging GCP project ID |
+
+### Staging Deployment
+- **Push to `main`**: Deploys to staging (without `--prod` flag)
+- **PR preview**: Vercel creates preview deployments
+- **Production**: Manual promotion after staging verification
+
+---
+
 ## 🚀 3. Production Deployment (CI/CD)
 
 Deployments are fully automated via GitHub Actions.

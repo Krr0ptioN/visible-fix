@@ -48,6 +48,25 @@
         "buildTarget": "build"
       }
     },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "cwd": "apps/api",
+        "jestConfig": "apps/api/jest.config.js",
+        "passWithNoTests": true
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "options": {
+        "cwd": "apps/api",
+        "lintFilePatterns": [
+          "apps/api/src/**/*.ts"
+        ]
+      },
+      "cache": true
+    },
     "prune": {
       "dependsOn": [
         "prune-lockfile",

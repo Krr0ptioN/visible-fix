@@ -5,7 +5,7 @@
 
 #show: project-research-template.with(
   title: project-title,
-  subtitle: "Project-Problem-Solution Plan (English)",
+  subtitle: "Project-Problem-Solution Plan",
   author: "Mardin Nasouti, Emir Şahin",
   institution: "Acibadem University",
   department: "Computer and Systems Engineering",
@@ -50,18 +50,23 @@
 
 #let subsection-title(label) = [
   #heading(level: 3, numbering: none)[#label]
+  #v(0.3em)
 ]
 
 = Project Form
 
-#section-title(1, [Project title], subtitle: [Official title used for all submissions and reports.])
-#text(weight: "bold", fill: ui.accent)[#project-title]
+#section-title(1, [Project title])
+
+#v(0.4em)
+
+#text(weight: "bold")[#project-title]
 
 #v(0.4em)
 
 #section-title(2, [Project description], subtitle: [Problem framing and measurable objectives.])
 
 #subsection-title([Project objectives])
+
 - Create a mobile-first platform for citizens to report infrastructure issues (potholes, broken streetlights, signage damage).
 - Build a transparent, real-time dashboard showing issue status and municipal response times.
 - Establish a community-driven data layer to identify systemic infrastructure neglect patterns.
@@ -78,26 +83,12 @@
 
 #section-title(3, [Project design], subtitle: [Method, workflow, and system architecture.])
 
-#grid(
-  columns: (1fr, 1fr),
-  column-gutter: 14pt,
-
-  [
-    #subsection-title([Activities to achieve objectives])
-    #v(0.22em)
-    - Build mobile app with camera-first reporting, GPS auto-tagging, and category selection.
-    - Implement admin dashboard for municipal teams to update issue status (Received → In Progress → Resolved).
-    - Create public map view showing all reported issues with status indicators.
-    - Develop analytics module to identify hotspots and track resolution times.
-    - Integrate with municipal 311 systems via API for two-way status sync.
-  ],
-
-  [
-    #subsection-title([System design])
-    #v(0.22em)
-    #research-system-flowchart()
-  ],
-)
+#subsection-title([Activities to achieve objectives])
+#v(0.22em)
+- Build mobile app with camera-first reporting, GPS auto-tagging, and category selection.
+- Implement admin dashboard for municipal and volunteers teams to update issue status (Received → In Progress → Resolved).
+- Create public map view showing all reported issues with status indicators.
+- Develop analytics module to identify hotspots and track resolution times.
 
 #table(
   columns: (1fr, 1.2fr, 1.8fr),
@@ -117,39 +108,33 @@ Implementation window: Week 1 to Week 8.
 #v(0.32em)
 
 #table(
-  columns: (0.55fr, 1.15fr, 1.55fr, 1.2fr),
+  columns: (0.15fr, 0.3fr, 1.2fr),
   align: (x, y) => if y == 0 { center + horizon } else if x == 0 { center + horizon } else { left + top },
   table.header(
     [*Week*],
     [*Phase*],
     [*Key output (end of week)*],
-    [*Owner(s)*],
   ),
 
   [1-2],
   [Research],
-  [User interviews (50+ citizens, 5 municipal staff), competitor analysis, feature prioritization.],
-  [Founder + Community Manager],
+  [User interviews (10+ citizens) feature prioritization.],
 
   [3-4],
   [Design],
   [Wireframes, UI prototype, database schema, API specification.],
-  [UI/UX + Lead Developer],
 
   [5-6],
   [Development],
   [MVP mobile app (iOS/Android), admin dashboard, public map view, backend API.],
-  [Lead Developer + UI/UX],
 
   [7],
   [Testing],
-  [Beta testing with 100 users, bug fixes, performance optimization, security audit.],
-  [Full Team],
+  [Beta testing with 3 users, bug fixes, performance optimization, security audit.],
 
   [8],
   [Launch],
-  [App store submission, soft launch to pilot neighborhood, initial marketing.],
-  [Community Manager + Founder],
+  [Soft launch to pilot neighborhood, initial marketing.],
 )
 
 #v(0.4em)
@@ -161,13 +146,10 @@ Implementation window: Week 1 to Week 8.
   align: (x, y) => if y == 0 or x == 1 { center + horizon } else { left + horizon },
   table.header([*Budget item*], [*Estimated cost*]),
   [Development (3-month runway - 2 devs)], [TRY 0],
-  [Infrastructure (cloud, hosting, CDN)], [TRY 0],
+  [Infrastructure (cloud, hosting, CDN)], [500 TRY],
   [UI/UX design], [TRY 0],
-  [App store fees (iOS + Google)], [Not Estimated],
   [Initial marketing], [Not Estimated],
-  [Legal + incorporation], [Not Estimated],
-  [Contingency (10%)], [Not Estimated],
-  [*Estimated total*], [#text(weight: "bold")[Not Estimated]],
+  [*Estimated total*], [Above #text(weight: "bold")[1000 TRY]],
 )
 
 #v(0.32em)
@@ -176,55 +158,12 @@ Implementation window: Week 1 to Week 8.
 
 #v(0.4em)
 
-#section-title(6, [Project team], subtitle: [Core team structure and roles.])
-
-#table(
-  columns: (0.60fr, 0.8fr, 1.45fr, 1.8fr),
-  inset: (x: 6pt, y: 4pt),
-  align: (x, y) => if y == 0 { center + horizon } else { left + top },
-  table.header(
-    [*ID*],
-    [*Role*],
-    [*Primary responsibility*],
-    [*Commitment*],
-  ),
-
-  [01],
-  [Founder / CEO],
-  [Strategy, fundraising, municipal partnerships, vision],
-  [Full-time],
-
-  [02],
-  [Lead Developer],
-  [Architecture, backend, API, mobile app lead],
-  [Full-time],
-
-  [03],
-  [UI/UX Designer],
-  [User research, wireframes, visual design, prototyping],
-  [Part-time / Contract],
-
-  [04],
-  [Community Manager],
-  [User acquisition, beta testing, feedback, social media],
-  [Part-time / Contract],
-)
-
-#v(0.4em)
-
 #section-title(7, [Impact and dissemination], subtitle: [Expected outcomes and growth strategy.])
 
 #subsection-title([Expected outcomes])
-- #text(fill: ui.accent)[500+ active reporters] within first 3 months post-launch.
-- #text(fill: ui.accent)[Average 40% reduction] in issue resolution time for pilot municipality.
+- #text(fill: ui.accent)[10+ active reporters] within first week of post-launch.
 - #text(fill: ui.accent)[Open dataset] of infrastructure conditions shared publicly (quarterly).
-- Municipal contract for expansion to 3 additional districts within 12 months.
-
-#subsection-title([Dissemination plan])
-- Launch announcement via local media and civic organization partnerships.
-- Open data portal publishing monthly infrastructure condition reports.
-- Case study submitted to civic tech conferences (Civic Tech Fest, Code for All).
-- Partnership pitch to municipal governments for full-scale deployment.
+- Launch announcement via local media, social clubs in our university.
 
 #v(0.6em)
 

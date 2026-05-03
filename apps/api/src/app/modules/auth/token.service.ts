@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
 import type { UserRole } from '@visiblefix/shared/types';
+import { APP_CONFIG, type ApplicationBootstrapOptions } from '../../app.config';
 
 type AccessTokenPayload = {
   sub: number;
@@ -16,14 +17,6 @@ type RefreshTokenPayload = {
   email: string;
   type: 'refresh';
 };
-
-function getRequiredEnv(name: string) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} must be configured.`);
-  }
-  return value;
-}
 
 function parseDurationToSeconds(value: string | undefined, fallbackSeconds: number) {
   if (!value?.trim()) {
@@ -59,7 +52,10 @@ function parseDurationToSeconds(value: string | undefined, fallbackSeconds: numb
 
 @Injectable()
 export class TokenService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    @Inject(APP_CONFIG) private readonly config: ApplicationBootstrapOptions
+  ) {}
 
   signAccessToken(user: {
     id: number;
@@ -76,7 +72,7 @@ export class TokenService {
     };
 
     return this.jwtService.sign(payload, {
-      secret: getRequiredEnv('JWT_ACCESS_SECRET'),
+      secret: this.config.auth.jwtAccessSecret,
       expiresIn: this.accessTtlSeconds(),
     });
   }
@@ -89,14 +85,14 @@ export class TokenService {
     };
 
     return this.jwtService.sign(payload, {
-      secret: getRequiredEnv('JWT_REFRESH_SECRET'),
+      secret: this.config.auth.jwtRefreshSecret,
       expiresIn: this.refreshTtlSeconds(),
     });
   }
 
   verifyAccessToken(token: string) {
     const payload = this.jwtService.verify<AccessTokenPayload>(token, {
-      secret: getRequiredEnv('JWT_ACCESS_SECRET'),
+      secret: this.config.auth.jwtAccessSecret,
     });
 
     if (payload.type !== 'access') {
@@ -108,7 +104,7 @@ export class TokenService {
 
   verifyRefreshToken(token: string) {
     const payload = this.jwtService.verify<RefreshTokenPayload>(token, {
-      secret: getRequiredEnv('JWT_REFRESH_SECRET'),
+      secret: this.config.auth.jwtRefreshSecret,
     });
 
     if (payload.type !== 'refresh') {
@@ -123,12 +119,14 @@ export class TokenService {
   }
 
   refreshTtlSeconds() {
-    const raw = process.env.JWT_REFRESH_TTL_SECONDS ?? process.env.JWT_REFRESH_TTL;
-    return parseDurationToSeconds(raw, 60 * 60 * 24 * 30);
+    return typeof this.config.auth.jwtRefreshTtl === 'number'
+      ? this.config.auth.jwtRefreshTtl
+      : parseDurationToSeconds(this.config.auth.jwtRefreshTtl, 60 * 60 * 24 * 30);
   }
 
   accessTtlSeconds() {
-    const raw = process.env.JWT_ACCESS_TTL_SECONDS ?? process.env.JWT_ACCESS_TTL;
-    return parseDurationToSeconds(raw, 60 * 15);
+    return typeof this.config.auth.jwtAccessTtl === 'number'
+      ? this.config.auth.jwtAccessTtl
+      : parseDurationToSeconds(this.config.auth.jwtAccessTtl, 60 * 15);
   }
 }
