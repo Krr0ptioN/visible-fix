@@ -3,6 +3,9 @@ name: CD Staging API (Google Cloud Run)
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
 
 jobs:
   deploy-staging:
@@ -38,9 +41,8 @@ jobs:
           service: 'visiblefix-api-staging'
           image: 'us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/visiblefix-api/visiblefix-api:staging'
           region: 'us-central1'
-          env_vars: |
-            NODE_ENV=staging
-            DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
-            JWT_ACCESS_SECRET=${{ secrets.STAGING_JWT_ACCESS_SECRET }}
-            JWT_REFRESH_SECRET=${{ secrets.STAGING_JWT_REFRESH_SECRET }}
-            OTEL_SDK_DISABLED=true
+          # Staging environment variables - these need to be set as secrets
+          # env_vars: |
+          #   DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+          #   NODE_ENV=staging
+          #   NEXT_PUBLIC_API_URL=https://visiblefix-api-staging-xxx-uc.a.run.app

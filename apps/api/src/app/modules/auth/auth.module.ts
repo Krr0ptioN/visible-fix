@@ -1,4 +1,4 @@
-import { DynamicModule, Global } from '@nestjs/common';
+import { DynamicModule, Global, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_CONFIG, type ApplicationBootstrapOptions } from '../../app.config';
 import { UsersModule } from '../users/users.module';

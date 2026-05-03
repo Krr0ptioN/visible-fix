@@ -43,14 +43,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
-
-      - run: pnpm db:apply-schema
-
       - uses: nrwl/nx-set-shas@v4
       
-      - run: pnpm nx affected --targets=lint,test,build
+      - run: pnpm nx affected --t lint test build
       
       - name: Run E2E tests for affected projects
-        run: pnpm nx affected --targets=e2e -- --workers=4
+        run: pnpm nx affected --t e2e -- --workers=4

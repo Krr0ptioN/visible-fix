@@ -26,13 +26,28 @@ resource "google_sql_user" "staging_user" {
 resource "google_cloud_run_v2_service" "api_staging" {
   name     = "visiblefix-api-staging"
   location = "us-central1"
-  project  = var.google_project_id
+  project  = var.google_project_id"
 
-  deletion_protection = false
+  deletion_protection = false"
 
   template {
     containers {
       image = "us-central1-docker.pkg.dev/${var.google_project_id}/${google_artifact_registry_repository.api_repo.repository_id}/visiblefix-api:staging"
+
+      env {
+        name  = "DATABASE_URL"
+        value = "postgres://${google_sql_user.staging_user.name}:${var.staging_db_password}@${google_sql_database_instance.postgres.public_ip_address}/visiblefix_staging"
+      }
+
+      env {
+        name  = "NODE_ENV"
+        value = "staging"
+      }
+
+      env {
+        name  = "NEXT_PUBLIC_API_URL"
+        value = "https://visiblefix-api-staging-xxx-uc.a.run.app"  # Will be updated after deployment
+      }
 
       ports {
         container_port = 3000
@@ -50,19 +65,13 @@ resource "google_cloud_run_v2_service" "api_staging" {
   }
 
   depends_on = [google_project_service.cloud_run_api]
-
-  lifecycle {
-    ignore_changes = [
-      template[0].containers[0].env,
-    ]
-  }
 }
 
 # 6. Allow public access to Staging Cloud Run
 resource "google_cloud_run_v2_service_iam_member" "staging_noauth" {
   location = google_cloud_run_v2_service.api_staging.location
-  project  = var.google_project_id
-  name     = google_cloud_run_v2_service.api_staging.name
+  project  = var.google_project_id"
+  name     = google_cloud_run_v2_service.api_staging.name"
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
@@ -74,10 +83,4 @@ output "staging_api_url" {
 
 output "staging_db_host" {
   value = google_sql_database_instance.postgres.public_ip_address
-}
-
-variable "staging_db_password" {
-  type        = string
-  description = "Password for the staging database user. Set with TF_VAR_staging_db_password from GitHub Secrets or local shell env."
-  sensitive   = true
 }

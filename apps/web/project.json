@@ -77,7 +77,7 @@
       "cache": true
     },
     "lint": {
-      "executor": "@nx/eslint:lint",
+      "executor": "@nx/linter:eslint",
       "options": {
         "cwd": "apps/web",
         "lintFilePatterns": [

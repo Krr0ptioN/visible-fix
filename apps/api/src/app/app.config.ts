@@ -1,6 +1,6 @@
 import { isAbsolute, join } from 'node:path';
 import { config as loadEnvFile } from 'dotenv';
-import { CONFIG_APP, validateApiEnv } from '@visiblefix/shared/config';
+import { CONFIG_APP, type ApiEnv, validateApiEnv } from '@visiblefix/shared/config';
 import type { ObjectStorageConfig } from './modules/files/object-storage/object-storage.config';
 
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';

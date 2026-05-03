@@ -1,11 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+
+export const OBSERVABILITY_CONFIG = Symbol('OBSERVABILITY_CONFIG');
+
+export type ObservabilityConfig = {
+  appName: string;
+  appEnv: string;
+};
 
 @Injectable()
 export class ObservabilityService {
   private readonly registry = new Registry();
-  private readonly appName = process.env.APP_NAME ?? 'visiblefix-api';
-  private readonly appEnv = process.env.NODE_ENV ?? 'development';
 
   private readonly httpRequestTotal = new Counter({
     name: 'visiblefix_http_requests_total',
@@ -29,13 +34,13 @@ export class ObservabilityService {
     registers: [this.registry],
   });
 
-  constructor() {
+  constructor(@Inject(OBSERVABILITY_CONFIG) private readonly config: ObservabilityConfig) {
     collectDefaultMetrics({
       register: this.registry,
       prefix: 'visiblefix_',
     });
 
-    this.processInfo.set({ app: this.appName, env: this.appEnv }, 1);
+    this.processInfo.set({ app: this.config.appName, env: this.config.appEnv }, 1);
   }
 
   recordHttpRequest(params: { method: string; route: string; statusCode: number; durationMs: number }) {
@@ -64,4 +69,3 @@ export class ObservabilityService {
       .replace(/\/\d+/g, '/:id');
   }
 }
-
