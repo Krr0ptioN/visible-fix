@@ -12,13 +12,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
