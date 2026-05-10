@@ -1,12 +1,10 @@
-'use client';
-
 import Link from 'next/link';
-import { useI18n } from '@/components/i18n-provider';
 import { SiteShell } from '@/components/site-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, SectionEyebrow } from '@/components/ui';
+import { getServerI18n } from '@/lib/i18n/server';
 
-export default function IndexPage() {
-  const { t } = useI18n();
+export default async function IndexPage() {
+  const { t } = await getServerI18n();
   const metrics = [
     { label: t('Report time'), value: '<60s' },
     { label: t('Public status flow'), value: t('4 states') },

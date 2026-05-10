@@ -17,6 +17,11 @@ const nextConfig = {
   env: {
     PORT: process.env.WEB_PORT || '3001',
   },
+  experimental: {
+    optimizePackageImports: [
+      // "@/components/ui",
+    ],
+  },
   async rewrites() {
     return [
       {
@@ -40,7 +45,11 @@ module.exports = withSentryConfig(composedConfig, {
   project: process.env.SENTRY_PROJECT,
   authToken: process.env.SENTRY_AUTH_TOKEN,
   silent: !process.env.CI,
-  disableLogger: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
   sourcemaps: {
     deleteSourcemapsAfterUpload: true,
   },
