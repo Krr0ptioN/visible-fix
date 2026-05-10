@@ -1,4 +1,4 @@
-import { DynamicModule, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { DynamicModule, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ObservabilityController } from './observability.controller';
 import { ObservabilityMiddleware } from './observability.middleware';
 import { OBSERVABILITY_CONFIG, ObservabilityService, type ObservabilityConfig } from './observability.service';

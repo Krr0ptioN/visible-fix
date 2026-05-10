@@ -1,4 +1,4 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import { LoggerModule } from 'nestjs-pino';

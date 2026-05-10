@@ -21,11 +21,19 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'pnpm nx run web:dev',
-    url: 'http://localhost:3001',
-    reuseExistingServer: true
-  },
+  webServer: [
+    {
+      command:
+        'cd ../.. && pnpm nx run visiblefix-api:build:development && LOG_TO_LOKI=false OTEL_SDK_DISABLED=true node dist/apps/api/main.js',
+      url: 'http://localhost:8031/api/v1',
+      reuseExistingServer: true,
+    },
+    {
+      command: 'PORT=3001 pnpm nx run web:dev',
+      url: 'http://localhost:3001',
+      reuseExistingServer: true,
+    },
+  ],
   projects: [
     {
       name: "chromium",

@@ -3,8 +3,6 @@ name: CD Staging Web (Vercel)
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   deploy-staging:

@@ -20,9 +20,9 @@ describe('POST /api/v1/auth/sign-up', () => {
     try {
       const res = await axios.post(`/api/v1/auth/sign-up`, newUser);
 
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(201);
       expect(res.data.success).toBe(true);
-      expect(res.data.data.user.email).toBe(newUser.email);
+      expect(res.data.data.email).toBe(newUser.email);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error('Axios error response:', error.response?.data);

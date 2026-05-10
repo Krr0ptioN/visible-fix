@@ -49,7 +49,6 @@ test.beforeEach(async ({ context }) => {
       name: 'vf_locale',
       value: 'en',
       url: BASE_URL,
-      path: '/',
       sameSite: 'Lax',
     },
   ]);
@@ -137,7 +136,7 @@ test('discovery issue selection navigates reliably to detail route', async ({ pa
   });
 
   await page.goto('/issues');
-  await page.getByRole('button', { name: 'Road collapse near ferry terminal' }).click();
+  await page.getByRole('button', { name: /Road collapse near ferry terminal Pothole In progress/ }).click();
   await page.getByRole('link', { name: 'Open full issue' }).click();
 
   await expect(page).toHaveURL(/\/issues\/101$/);
