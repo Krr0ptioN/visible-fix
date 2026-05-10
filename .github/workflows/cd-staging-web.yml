@@ -1,8 +1,7 @@
-name: CD Staging Web (Vercel)
+name: CD Staging Web (disabled)
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy-staging:

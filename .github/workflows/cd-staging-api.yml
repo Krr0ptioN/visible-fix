@@ -1,8 +1,7 @@
-name: CD Staging API (Google Cloud Run)
+name: CD Staging API (disabled)
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy-staging:
