@@ -30,15 +30,15 @@ export function serializeCookie(
     parts.push(`SameSite=${options.sameSite ?? 'Lax'}`);
   }
 
-  if (options.secure ?? process.env.NODE_ENV === 'production') {
+  if (options.secure ?? false) {
     parts.push('Secure');
   }
 
   return parts.join('; ');
 }
 
-export function clearCookie(name: string) {
-  return serializeCookie(name, '', { maxAge: 0 });
+export function clearCookie(name: string, options: { secure?: boolean } = {}) {
+  return serializeCookie(name, '', { maxAge: 0, secure: options.secure });
 }
 
 export function readCookie(cookieHeader: string | undefined, name: string) {

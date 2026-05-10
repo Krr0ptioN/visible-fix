@@ -1,10 +1,9 @@
-import { killPort } from '@nx/node/utils';
 /* eslint-disable */
 
 module.exports = async function() {
   // Put clean up logic here (e.g. stopping services, docker-compose, etc.).
   // Hint: `globalThis` is shared between setup and teardown.
   const port = process.env.API_PORT ? Number(process.env.API_PORT) : process.env.PORT ? Number(process.env.PORT) : 3000;
-  await killPort(port);
+  console.log(`Skipping port cleanup for ${port}; teardown is dependency-free in CI.`);
   console.log(globalThis.__TEARDOWN_MESSAGE__);
 };

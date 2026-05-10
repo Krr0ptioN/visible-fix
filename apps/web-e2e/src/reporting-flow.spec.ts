@@ -8,7 +8,6 @@ test.beforeEach(async ({ context }) => {
       name: 'vf_locale',
       value: 'en',
       url: BASE_URL,
-      path: '/',
       sameSite: 'Lax',
     },
   ]);

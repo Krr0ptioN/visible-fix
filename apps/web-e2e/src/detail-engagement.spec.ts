@@ -82,7 +82,6 @@ test.beforeEach(async ({ context }) => {
       name: 'vf_locale',
       value: 'en',
       url: BASE_URL,
-      path: '/',
       sameSite: 'Lax',
     },
   ]);
@@ -114,10 +113,10 @@ test('existing upvote remains idempotent across reloads', async ({ page }) => {
   });
 
   await page.goto('/issues/501');
-  await expect(page.getByRole('button', { name: '✓ Supported (5)' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Supported (5)' })).toBeDisabled();
 
   await page.reload();
-  await expect(page.getByRole('button', { name: '✓ Supported (5)' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Supported (5)' })).toBeDisabled();
   expect(postCount).toBe(0);
 });
 
@@ -135,10 +134,10 @@ test('duplicate/failed upvote path surfaces API error and preserves state', asyn
   });
 
   await page.goto('/issues/501');
-  await page.getByRole('button', { name: '👍 Support (5)' }).click();
+  await page.getByRole('button', { name: 'Support (5)' }).click();
 
   await expect(page.getByText('You already supported this issue.')).toBeVisible();
-  await expect(page.getByRole('button', { name: '👍 Support (5)' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Support (5)' })).toBeVisible();
 });
 
 test('share fallback copies expected deep-link payload', async ({ page }) => {

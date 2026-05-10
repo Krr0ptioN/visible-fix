@@ -44,3 +44,8 @@ jobs:
           service: 'visiblefix-api'
           image: 'us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/visiblefix-api/visiblefix-api:latest'
           region: 'us-central1'
+          env_vars: |
+            NODE_ENV=production
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}

@@ -1,19 +1,19 @@
 # Enable required APIs for the backend
 resource "google_project_service" "cloud_run_api" {
-  project = var.google_project_id
-  service = "run.googleapis.com"
+  project            = var.google_project_id
+  service            = "run.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_project_service" "sql_admin_api" {
-  project = var.google_project_id
-  service = "sqladmin.googleapis.com"
+  project            = var.google_project_id
+  service            = "sqladmin.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_project_service" "artifact_registry_api" {
-  project = var.google_project_id
-  service = "artifactregistry.googleapis.com"
+  project            = var.google_project_id
+  service            = "artifactregistry.googleapis.com"
   disable_on_destroy = false
 }
 
@@ -26,7 +26,7 @@ resource "google_sql_database_instance" "postgres" {
 
   settings {
     tier = "db-f1-micro" # Free tier eligible
-    
+
     ip_configuration {
       ipv4_enabled = true
     }
@@ -76,17 +76,12 @@ resource "google_cloud_run_v2_service" "api" {
   template {
     containers {
       image = "us-central1-docker.pkg.dev/${var.google_project_id}/${google_artifact_registry_repository.api_repo.repository_id}/visiblefix-api:latest"
-      
-      env {
-        name  = "DATABASE_URL"
-        value = "postgres://${google_sql_user.users.name}:${var.db_password}@${google_sql_database_instance.postgres.public_ip_address}/visiblefix"
-      }
-      
+
       ports {
         container_port = 3000
       }
     }
-    
+
     scaling {
       max_instance_count = 1 # Keep it low for cost control
     }
@@ -98,6 +93,12 @@ resource "google_cloud_run_v2_service" "api" {
   }
 
   depends_on = [google_project_service.cloud_run_api]
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].env,
+    ]
+  }
 }
 
 # Allow public access to Cloud Run (Optional, usually behind a load balancer or for dev)
@@ -123,4 +124,3 @@ output "api_url" {
 output "db_host" {
   value = google_sql_database_instance.postgres.public_ip_address
 }
-

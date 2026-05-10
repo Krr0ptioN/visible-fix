@@ -1,5 +1,6 @@
-import { ConflictException, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import type { AuthUser } from '@visiblefix/shared/types';
+import { APP_CONFIG, type ApplicationBootstrapOptions } from '../../app.config';
 import type { RequestUser } from '../../common/auth/request-user.interface';
 import { AuthSessionRepository } from './auth-session.repository';
 import { PasswordService } from './password.service';
@@ -12,12 +13,13 @@ export class AuthService implements OnModuleInit {
     private readonly usersService: UsersService,
     private readonly authSessionRepository: AuthSessionRepository,
     private readonly passwordService: PasswordService,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
+    @Inject(APP_CONFIG) private readonly config: ApplicationBootstrapOptions
   ) {}
 
   async onModuleInit() {
-    const email = process.env.ADMIN_EMAIL?.trim();
-    const password = process.env.ADMIN_PASSWORD?.trim();
+    const email = this.config.auth.adminEmail?.trim();
+    const password = this.config.auth.adminPassword?.trim();
 
     if (!email || !password) {
       return;
@@ -31,7 +33,7 @@ export class AuthService implements OnModuleInit {
     const passwordHash = await this.passwordService.hash(password);
     await this.usersService.create({
       email,
-      name: process.env.ADMIN_NAME?.trim() || 'VisibleFix Admin',
+      name: this.config.auth.adminName.trim() || 'VisibleFix Admin',
       role: 'admin',
       passwordHash,
     });

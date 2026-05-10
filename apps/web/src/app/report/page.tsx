@@ -20,6 +20,13 @@ const ISTANBUL_BOUNDS = {
 const CATEGORIES: IssueCategory[] = ['pothole', 'streetlight', 'waste', 'sidewalk', 'water_leak', 'accessibility', 'other'];
 
 type SubmitState = 'idle' | 'loading' | 'success' | 'error';
+type UploadEvidenceResponse = {
+  success: boolean;
+  data?: {
+    url: string;
+  };
+  message?: string;
+};
 
 const createDeviceId = () => {
   if (typeof window === 'undefined') return 'web-anonymous';
@@ -122,20 +129,40 @@ export default function ReportPage() {
       return;
     }
 
-    const payload: CreateIssueInput = {
-      title: title.trim(),
-      description: description.trim() || undefined,
-      category,
-      imageUrl: imageUrl.trim() || undefined,
-      latitude: parsedLat,
-      longitude: parsedLng,
-      deviceId,
-    };
-
     setSubmitState('loading');
     setErrorMessage('');
 
     try {
+      let uploadedEvidenceUrl = imageUrl.trim() || undefined;
+      if (!uploadedEvidenceUrl && mediaItems.length > 0) {
+        const primaryMedia = mediaItems.find((item) => item.kind === 'image') ?? mediaItems[0];
+        const formData = new FormData();
+        formData.append('file', primaryMedia.file);
+
+        const uploadResponse = await fetch(`${API_BASE_URL}/files/evidence`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const uploadBody = (await uploadResponse.json().catch(() => null)) as UploadEvidenceResponse | null;
+
+        if (!uploadResponse.ok || !uploadBody?.data?.url) {
+          throw new Error(uploadBody?.message || t('Failed to upload evidence file.'));
+        }
+
+        uploadedEvidenceUrl = uploadBody.data.url;
+      }
+
+      const payload: CreateIssueInput = {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        category,
+        imageUrl: uploadedEvidenceUrl,
+        latitude: parsedLat,
+        longitude: parsedLng,
+        deviceId,
+      };
+
       const response = await fetch(`${API_BASE_URL}/issues`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -233,7 +260,7 @@ export default function ReportPage() {
                 </label>
                 <p className="text-xs leading-5 text-muted-foreground">
                   {t(
-                    'The current API persists `imageUrl` only. Uploaded media is fully previewable and removable in the UI now; wiring binary upload to storage is the next backend step.'
+                    'If no hosted URL is provided, the first selected file is uploaded as evidence and attached automatically.'
                   )}
                 </p>
               </section>

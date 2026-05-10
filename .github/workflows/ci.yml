@@ -7,22 +7,50 @@ on:
 jobs:
   main:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: visiblefix
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d visiblefix"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      API_PORT: 8031
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/visiblefix
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      OTEL_SDK_DISABLED: true
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v6
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
 
-      - uses: nrwl/nx-set-shas@v4
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
 
-      - run: pnpm nx affected -t lint test build
+      - run: pnpm db:apply-schema
+
+      - uses: nrwl/nx-set-shas@v4
+      
+      - run: pnpm nx affected --targets=lint,test,build
+      
+      - name: Run E2E tests for affected projects
+        run: pnpm nx affected --targets=e2e -- --workers=4

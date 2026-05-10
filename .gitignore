@@ -143,6 +143,9 @@ vite.config.ts.timestamp-*
 **/.terraform/*
 *.tfstate
 *.tfstate.*
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
 crash.log
 crash.*.log
 override.tf
@@ -156,3 +159,9 @@ override.tf.json
 .opencode/
 .planning/
 AGENTS.md
+
+# Local file/object storage artifacts
+storage/
+/docs/project-problem-solution/main.pdf
+/apps/web/next-env.d.ts
+/docs/project-proposals/main.pdf

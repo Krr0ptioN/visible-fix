@@ -4,6 +4,87 @@
   "sourceRoot": "apps/web",
   "projectType": "application",
   "tags": [],
-  "// targets": "to see all targets run: nx show project web --web",
-  "targets": {}
+  "targets": {
+    "build": {
+      "options": {
+        "cwd": "apps/web",
+        "tty": false,
+        "command": "next build"
+      },
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": ["default", "^default", {"externalDependencies": ["next"]}],
+      "outputs": ["{workspaceRoot}/apps/web/.next/!(cache)/**/*", "{workspaceRoot}/apps/web/.next/!(cache)"],
+      "executor": "nx:run-commands",
+      "configurations": {},
+      "parallelism": true
+    },
+    "dev": {
+      "continuous": true,
+      "options": {
+        "cwd": "apps/web",
+        "command": "next dev"
+      },
+      "executor": "nx:run-commands",
+      "configurations": {},
+      "parallelism": true
+    },
+    "start": {
+      "continuous": true,
+      "options": {
+        "cwd": "apps/web",
+        "command": "next start"
+      },
+      "dependsOn": ["build"],
+      "executor": "nx:run-commands",
+      "configurations": {},
+      "parallelism": true
+    },
+    "serve-static": {
+      "continuous": true,
+      "options": {
+        "cwd": "apps/web",
+        "command": "next start"
+      },
+      "dependsOn": ["build"],
+      "executor": "nx:run-commands",
+      "configurations": {},
+      "parallelism": true
+    },
+    "build-deps": {
+      "dependsOn": ["^build"],
+      "configurations": {},
+      "parallelism": true,
+      "executor": "nx:noop"
+    },
+    "watch-deps": {
+      "continuous": true,
+      "dependsOn": ["build-deps"],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm exec nx watch --projects web --includeDependentProjects --pnpm exec nx build-deps web"
+      },
+      "configurations": {},
+      "parallelism": true
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "cwd": "apps/web",
+        "jestConfig": "apps/web/jest.config.js",
+        "passWithNoTests": true
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "cwd": "apps/web",
+        "lintFilePatterns": [
+          "apps/web/src/**/*.{ts,tsx}"
+        ]
+      },
+      "cache": true
+    }
+  }
 }

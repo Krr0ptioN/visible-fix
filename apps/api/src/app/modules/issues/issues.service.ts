@@ -77,11 +77,11 @@ export class IssuesService {
     };
   }
 
-  async createIssue(payload: unknown) {
+  async createIssue(payload: unknown, municipalityId?: number) {
     const parsed = this.parseOrBadRequest(createIssueSchema, payload);
     const created = await this.issuesRepository.create({
       ...parsed,
-      municipalityId: 1,
+      municipalityId: municipalityId ?? null,
     });
 
     return {

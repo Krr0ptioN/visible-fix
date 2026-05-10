@@ -86,11 +86,6 @@ const projectPoints = (points: Coordinate[]) => {
   }));
 };
 
-const containerStyle = {
-  width: '100%',
-  height: '100%',
-};
-
 const defaultCenter = {
   lat: 41.0082,
   lng: 28.9784,

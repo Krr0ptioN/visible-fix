@@ -1,0 +1,74 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: visiblefix-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - visiblefix_prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: visiblefix-loki
+    restart: unless-stopped
+    command: ['-config.file=/etc/loki/config.yaml']
+    volumes:
+      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+      - visiblefix_loki_data:/loki
+    ports:
+      - '3100:3100'
+
+  tempo:
+    image: grafana/tempo:2.6.0
+    container_name: visiblefix-tempo
+    restart: unless-stopped
+    command: ['-config.file=/etc/tempo/config.yaml']
+    volumes:
+      - ./tempo/config.yaml:/etc/tempo/config.yaml:ro
+      - visiblefix_tempo_data:/var/tempo
+    ports:
+      - '3200:3200'
+      - '4317:4317'
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.107.0
+    container_name: visiblefix-otel-collector
+    restart: unless-stopped
+    command: ['--config=/etc/otelcol/config.yaml']
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - '4318:4318'
+      - '8889:8889'
+    depends_on:
+      - tempo
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: visiblefix-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - visiblefix_grafana_data:/var/lib/grafana
+    ports:
+      - '3002:3000'
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+volumes:
+  visiblefix_prometheus_data:
+  visiblefix_loki_data:
+  visiblefix_tempo_data:
+  visiblefix_grafana_data:
+

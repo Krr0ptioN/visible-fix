@@ -8,7 +8,6 @@ test.beforeEach(async ({ context }) => {
       name: 'vf_locale',
       value: 'en',
       url: BASE_URL,
-      path: '/',
       sameSite: 'Lax',
     },
   ]);
@@ -17,7 +16,7 @@ test.beforeEach(async ({ context }) => {
 test('home page exposes main entry points', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Report city issues');
+  await expect(page.getByRole('heading', { level: 2, name: /Report city issues/ })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open report intake' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'View issue grid' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open operations' })).toBeVisible();
@@ -122,10 +121,10 @@ test('issue detail timeline and upvote interaction work with API responses', asy
 
   await expect(page.getByRole('heading', { name: 'Broken street light near school' })).toBeVisible();
   await expect(page.getByText('Status timeline')).toBeVisible();
-  await expect(page.getByRole('button', { name: '👍 Support (3)' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Support (3)' })).toBeVisible();
 
-  await page.getByRole('button', { name: '👍 Support (3)' }).click();
-  await expect(page.getByRole('button', { name: '✓ Supported (4)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Support (3)' }).click();
+  await expect(page.getByRole('button', { name: 'Supported (4)' })).toBeVisible();
 });
 
 test('issue detail renders not-found error from API', async ({ page }) => {

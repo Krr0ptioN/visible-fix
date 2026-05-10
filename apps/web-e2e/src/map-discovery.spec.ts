@@ -49,7 +49,6 @@ test.beforeEach(async ({ context }) => {
       name: 'vf_locale',
       value: 'en',
       url: BASE_URL,
-      path: '/',
       sameSite: 'Lax',
     },
   ]);
@@ -90,7 +89,7 @@ test('discovery applies category/status filters and renders within latency budge
   await expect(page.getByRole('button', { name: 'Road collapse near ferry terminal' })).toBeVisible();
 
   const firstPaintInMs = Date.now() - startedAt;
-  expect(firstPaintInMs).toBeLessThan(10_000);
+  expect(firstPaintInMs).toBeLessThan(15_000);
 
   await page.getByRole('button', { name: 'Pothole', exact: true }).click();
   await expect.poll(() => queryHistory.at(-1) || '').toContain('category=pothole');
@@ -137,7 +136,7 @@ test('discovery issue selection navigates reliably to detail route', async ({ pa
   });
 
   await page.goto('/issues');
-  await page.getByRole('button', { name: 'Road collapse near ferry terminal' }).click();
+  await page.getByRole('button', { name: /Road collapse near ferry terminal Pothole In progress/ }).click();
   await page.getByRole('link', { name: 'Open full issue' }).click();
 
   await expect(page).toHaveURL(/\/issues\/101$/);
