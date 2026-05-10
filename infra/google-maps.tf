@@ -15,7 +15,13 @@ variable "google_project_id" {
 variable "allowed_referrers" {
   type        = list(string)
   description = "List of domains allowed to use the browser key (e.g., ['localhost:3000/*', 'visible-fix.vercel.app/*'])"
-  default     = ["localhost:3000/*", "visible-fix.vercel.app/*", "vis.mardin.cc/*"]
+  default     = [
+    "localhost:3000/*",
+    "visible-fix.vercel.app/*",
+    "visible-fix.vercel.app",
+    "vis.mardin.cc/*",
+    "vis.mardin.cc"
+  ]
 }
 
 variable "enable_geocoding_api" {
