@@ -1,13 +1,7 @@
-name: CD Web (Vercel)
+name: CD Web (disabled)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/web/**'
-      - 'libs/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
+  workflow_dispatch:
 
 jobs:
   deploy:

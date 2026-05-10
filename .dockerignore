@@ -1,0 +1,13 @@
+*
+
+!apps/
+!apps/api/
+!apps/api/**
+!libs/
+!libs/**
+!package.json
+!pnpm-lock.yaml
+!nx.json
+!tsconfig.base.json
+!drizzle.config.ts
+!Dockerfile
