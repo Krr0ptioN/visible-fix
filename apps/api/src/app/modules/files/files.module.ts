@@ -1,4 +1,4 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule } from '@nestjs/common';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
 import { GcsObjectStorageAdapter } from './object-storage/gcs-object-storage.adapter';

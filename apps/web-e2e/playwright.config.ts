@@ -26,13 +26,10 @@ export default defineConfig({
       command:
         'cd ../.. && pnpm nx run visiblefix-api:build:development && LOG_TO_LOKI=false OTEL_SDK_DISABLED=true node dist/apps/api/main.js',
       url: 'http://localhost:8031/api/v1',
-      env: {
-        API_PORT: '8031',
-      },
       reuseExistingServer: true,
     },
     {
-      command: 'API_PORT=8031 INTERNAL_API_URL=http://127.0.0.1:8031 NEXT_PUBLIC_API_URL=http://127.0.0.1:8031/api/v1 PORT=3001 pnpm nx run web:dev',
+      command: 'PORT=3001 pnpm nx run web:dev',
       url: 'http://localhost:3001',
       reuseExistingServer: true,
     },
