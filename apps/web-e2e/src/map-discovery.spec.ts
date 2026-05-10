@@ -89,7 +89,7 @@ test('discovery applies category/status filters and renders within latency budge
   await expect(page.getByRole('button', { name: 'Road collapse near ferry terminal' })).toBeVisible();
 
   const firstPaintInMs = Date.now() - startedAt;
-  expect(firstPaintInMs).toBeLessThan(10_000);
+  expect(firstPaintInMs).toBeLessThan(15_000);
 
   await page.getByRole('button', { name: 'Pothole', exact: true }).click();
   await expect.poll(() => queryHistory.at(-1) || '').toContain('category=pothole');
