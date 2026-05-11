@@ -1,5 +1,6 @@
 import { DynamicModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { LoggerModule } from 'nestjs-pino';
 import { validateApiEnv } from '@visiblefix/shared/config';
@@ -15,10 +16,47 @@ import { AdminModule } from './modules/admin/admin.module';
 import { FilesModule } from './modules/files/files.module';
 import { ObservabilityModule } from './modules/observability/observability.module';
 
-const loggerModule = (config: ApplicationBootstrapOptions) => {
+const googleSeverityByPinoLevel: Record<string, string> = {
+  trace: 'DEBUG',
+  debug: 'DEBUG',
+  info: 'INFO',
+  warn: 'WARNING',
+  error: 'ERROR',
+  fatal: 'CRITICAL',
+};
+
+const severityFields = (label: string, number: number) => {
+  const severity = googleSeverityByPinoLevel[label] ?? label.toUpperCase();
+
+  return {
+    level: number,
+    severity,
+    'logging.googleapis.com/severity': severity,
+  };
+};
+
+const cloudTrace = (req: IncomingMessage, projectId?: string) => {
+  if (!projectId) return undefined;
+
+  const header = req.headers['x-cloud-trace-context'];
+  const value = Array.isArray(header) ? header[0] : header;
+  const traceId = value?.split('/')[0];
+
+  return traceId ? `projects/${projectId}/traces/${traceId}` : undefined;
+};
+
+const httpRequest = (req: IncomingMessage, res: ServerResponse) => ({
+  requestMethod: req.method,
+  requestUrl: req.url,
+  status: res.statusCode,
+  userAgent: req.headers['user-agent'],
+  remoteIp: req.socket.remoteAddress,
+});
+
+export const createPinoHttpOptions = (config: ApplicationBootstrapOptions) => {
   const transportTargets: Array<{ target: string; options?: Record<string, unknown> }> = [];
 
-  if (config.logging.pretty) {
+  if (!config.logging.googleCloud && config.logging.pretty) {
     transportTargets.push({
       target: 'pino-pretty',
       options: {
@@ -30,7 +68,7 @@ const loggerModule = (config: ApplicationBootstrapOptions) => {
     });
   }
 
-  if (config.logging.toLoki) {
+  if (!config.logging.googleCloud && config.logging.toLoki) {
     transportTargets.push({
       target: 'pino-loki',
       options: {
@@ -46,35 +84,64 @@ const loggerModule = (config: ApplicationBootstrapOptions) => {
     });
   }
 
-  return LoggerModule.forRoot({
-    pinoHttp: {
-      name: config.appName,
-      level: config.logging.level,
-      quietReqLogger: false,
-      customProps: () => ({
+  return {
+    name: config.appName,
+    level: config.logging.level,
+    messageKey: 'message',
+    timestamp: config.logging.googleCloud ? () => `,"time":"${new Date().toISOString()}"` : undefined,
+    formatters: {
+      level: severityFields,
+      bindings: () => ({
         app: config.appName,
         env: config.appEnv,
       }),
-      genReqId: (req, res) => {
-        const fromHeader = req.headers['x-request-id'];
-        const requestId = Array.isArray(fromHeader) ? fromHeader[0] : fromHeader;
-        const resolved = requestId || randomUUID();
-        res.setHeader('x-request-id', resolved);
-        return resolved;
-      },
-      redact: {
-        paths: [
-          'req.headers.authorization',
-          'req.headers.cookie',
-          'req.headers["set-cookie"]',
-          'req.body.password',
-          'req.body.accessToken',
-          'req.body.refreshToken',
-        ],
-        censor: '[REDACTED]',
-      },
-      ...(transportTargets.length > 0 ? { transport: { targets: transportTargets } } : {}),
     },
+    quietReqLogger: false,
+    customProps: (req: IncomingMessage) => {
+      const trace = cloudTrace(req, config.logging.googleCloudProjectId);
+
+      return {
+        app: config.appName,
+        env: config.appEnv,
+        ...(trace ? { trace, 'logging.googleapis.com/trace': trace } : {}),
+      };
+    },
+    customSuccessObject: (req: IncomingMessage, res: ServerResponse, val: Record<string, unknown>) => ({
+      ...val,
+      httpRequest: httpRequest(req, res),
+      'logging.googleapis.com/httpRequest': httpRequest(req, res),
+    }),
+    customErrorObject: (req: IncomingMessage, res: ServerResponse, error: Error, val: Record<string, unknown>) => ({
+      ...val,
+      error,
+      httpRequest: httpRequest(req, res),
+      'logging.googleapis.com/httpRequest': httpRequest(req, res),
+    }),
+    genReqId: (req, res) => {
+      const fromHeader = req.headers['x-request-id'];
+      const requestId = Array.isArray(fromHeader) ? fromHeader[0] : fromHeader;
+      const resolved = requestId || randomUUID();
+      res.setHeader('x-request-id', resolved);
+      return resolved;
+    },
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.headers["set-cookie"]',
+        'req.body.password',
+        'req.body.accessToken',
+        'req.body.refreshToken',
+      ],
+      censor: '[REDACTED]',
+    },
+    ...(transportTargets.length > 0 ? { transport: { targets: transportTargets } } : {}),
+  };
+};
+
+const loggerModule = (config: ApplicationBootstrapOptions) => {
+  return LoggerModule.forRoot({
+    pinoHttp: createPinoHttpOptions(config),
   });
 };
 

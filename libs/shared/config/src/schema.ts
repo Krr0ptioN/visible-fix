@@ -34,6 +34,7 @@ export enum CONFIG_APP {
   LOG_LEVEL = 'LOG_LEVEL',
   LOG_PRETTY = 'LOG_PRETTY',
   LOG_TO_LOKI = 'LOG_TO_LOKI',
+  LOG_GOOGLE_CLOUD = 'LOG_GOOGLE_CLOUD',
   LOKI_HOST = 'LOKI_HOST',
 
   OTEL_SERVICE_NAME = 'OTEL_SERVICE_NAME',
@@ -95,6 +96,7 @@ export const apiEnvSchema = z
     [CONFIG_APP.LOG_LEVEL]: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
     [CONFIG_APP.LOG_PRETTY]: optionalBoolean,
     [CONFIG_APP.LOG_TO_LOKI]: optionalBoolean.default(false),
+    [CONFIG_APP.LOG_GOOGLE_CLOUD]: optionalBoolean,
     [CONFIG_APP.LOKI_HOST]: z.string().url().default('http://localhost:3100'),
 
     [CONFIG_APP.OTEL_SERVICE_NAME]: optionalString,

@@ -84,7 +84,7 @@ Ensure the following secrets are set in your repository:
 The GitHub Actions deployer service account needs Compute Engine instance access and Artifact Registry write
 access so the API workflow can push images and restart the container on the API VM. The VM uses its own service
 account with Artifact Registry read access so it can pull the latest image. These bindings are managed in
-`infra/backend.tf`.
+`infra/api.tf` and `infra/modules/api/`.
 
 ---
 

@@ -28,6 +28,8 @@ export type ApplicationBootstrapOptions = {
     pretty: boolean;
     toLoki: boolean;
     lokiHost: string;
+    googleCloud: boolean;
+    googleCloudProjectId?: string;
   };
   telemetry: {
     disabled: boolean;
@@ -41,7 +43,7 @@ export const envFilePath = ['.env', '.env.local'];
 
 export function loadApiEnvFiles() {
   for (const path of envFilePath) {
-    loadEnvFile({ path, override: false });
+    loadEnvFile({ path, override: false, quiet: true });
   }
 }
 
@@ -54,6 +56,10 @@ export default function appConfig(env: NodeJS.ProcessEnv = process.env): Applica
   const port = parsed[CONFIG_APP.API_PORT];
   const appName = parsed[CONFIG_APP.APP_NAME];
   const appEnv = parsed[CONFIG_APP.NODE_ENV];
+  const googleCloudProjectId = env.GOOGLE_CLOUD_PROJECT || env.GCP_PROJECT_ID;
+  const googleCloud =
+    parsed[CONFIG_APP.LOG_GOOGLE_CLOUD] ??
+    Boolean(googleCloudProjectId || env.K_SERVICE || env.GCE_METADATA_HOST);
   const publicBaseUrl = parsed[CONFIG_APP.OBJECT_STORAGE_PUBLIC_BASE_URL] ?? `http://localhost:${port}/uploads`;
   const localRoot = parsed[CONFIG_APP.LOCAL_OBJECT_STORAGE_ROOT];
 
@@ -88,9 +94,11 @@ export default function appConfig(env: NodeJS.ProcessEnv = process.env): Applica
     },
     logging: {
       level: parsed[CONFIG_APP.LOG_LEVEL] ?? (appEnv === 'production' ? 'info' : 'debug'),
-      pretty: parsed[CONFIG_APP.LOG_PRETTY] ?? appEnv !== 'production',
-      toLoki: parsed[CONFIG_APP.LOG_TO_LOKI],
+      pretty: googleCloud ? false : parsed[CONFIG_APP.LOG_PRETTY] ?? appEnv !== 'production',
+      toLoki: googleCloud ? false : parsed[CONFIG_APP.LOG_TO_LOKI],
       lokiHost: parsed[CONFIG_APP.LOKI_HOST],
+      googleCloud,
+      googleCloudProjectId,
     },
     telemetry: {
       disabled: parsed[CONFIG_APP.OTEL_SDK_DISABLED],

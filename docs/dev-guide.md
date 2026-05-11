@@ -141,7 +141,7 @@ docker compose -f infra/observability/docker-compose.yml down
 
 Recommended production mapping on the Compute Engine API VM:
 
-- Logs: app stdout/stderr -> Cloud Logging
+- Logs: pino JSON -> systemd append file -> Ops Agent -> Cloud Logging
 - Traces: OpenTelemetry -> OTLP collector -> Cloud Trace (or direct Cloud Trace exporter)
 - Metrics: Prometheus/OpenTelemetry metrics -> Managed Service for Prometheus / Cloud Monitoring
 

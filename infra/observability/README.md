@@ -31,4 +31,8 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces
 
 ## Google Observability path
 
+The production Compute Engine API VM installs the Google Ops Agent and collects structured pino JSON logs from
+`/var/log/visiblefix/api.log`. The API runs with `LOG_GOOGLE_CLOUD=true`, `LOG_PRETTY=false`, and `LOG_TO_LOKI=false`
+so Cloud Logging receives parseable JSON entries with severity, trace, and HTTP request fields.
+
 For managed traces in Google Cloud, use `infra/observability/otel-collector/config.gcp.yaml` with valid ADC/service-account credentials and `GOOGLE_CLOUD_PROJECT`.
