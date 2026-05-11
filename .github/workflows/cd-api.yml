@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
 jobs:
   deploy:
@@ -38,9 +38,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply database schema
-        run: pnpm db:push
-
       - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
@@ -49,6 +46,21 @@ jobs:
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Start Cloud SQL Auth Proxy
+        run: |
+          curl -L -o cloud-sql-proxy \
+            https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.20.0/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy \
+            --port 5432 \
+            "${{ secrets.GCP_PROJECT_ID }}:us-central1:visiblefix-db" &
+          echo $! > /tmp/cloud-sql-proxy.pid
+          sleep 5
+
+      - name: Apply database migrations
+        run: |
+          DATABASE_URL="postgres://visiblefix_user:${DB_PASSWORD}@127.0.0.1:5432/visiblefix" pnpm db:migrate
 
       - name: 'Configure Docker'
         run: |
