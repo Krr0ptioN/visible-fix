@@ -3,11 +3,12 @@ import 'server-only';
 import { cookies } from 'next/headers';
 
 export function getServerApiOrigin() {
+  const productionApiOrigin = 'https://visiblefix-api-196178459147.us-central1.run.app';
   const explicitOrigin =
     process.env.INTERNAL_API_URL ||
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '');
 
-  return explicitOrigin || 'http://127.0.0.1:8030';
+  return explicitOrigin || (process.env.VERCEL_ENV === 'production' ? productionApiOrigin : 'http://127.0.0.1:8030');
 }
 
 export async function getCookieHeader() {

@@ -14,6 +14,9 @@ const changa = Changa({
 export const metadata = {
   title: 'VisibleFix',
   description: 'Canlı harita bağlamı ve net durum akışlarıyla modern kent sorunu bildirimi.',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default async function RootLayout({

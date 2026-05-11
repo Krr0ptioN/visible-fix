@@ -5,7 +5,10 @@ const { composePlugins, withNx } = require('@nx/next');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { withSentryConfig } = require('@sentry/nextjs');
 
-const configuredApiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8030/api/v1';
+const productionApiBase = 'https://visiblefix-api-196178459147.us-central1.run.app/api/v1';
+const configuredApiBase =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.VERCEL_ENV === 'production' ? productionApiBase : 'http://localhost:8030/api/v1');
 const apiOrigin = configuredApiBase.replace(/\/api\/v1\/?$/, '');
 
 /**
