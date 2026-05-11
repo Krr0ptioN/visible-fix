@@ -11,6 +11,12 @@ resource "google_project_service" "sql_admin_api" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "service_usage_api" {
+  project            = var.google_project_id
+  service            = "serviceusage.googleapis.com"
+  disable_on_destroy = false
+}
+
 resource "google_project_service" "artifact_registry_api" {
   project            = var.google_project_id
   service            = "artifactregistry.googleapis.com"
@@ -61,6 +67,12 @@ locals {
 resource "google_project_iam_member" "cloudsql_client" {
   project = var.google_project_id
   role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${local.deployer_service_account_email}"
+}
+
+resource "google_project_iam_member" "deployer_service_usage_viewer" {
+  project = var.google_project_id
+  role    = "roles/serviceusage.serviceUsageViewer"
   member  = "serviceAccount:${local.deployer_service_account_email}"
 }
 

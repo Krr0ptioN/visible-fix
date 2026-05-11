@@ -38,18 +38,16 @@ For GitHub Actions Terraform runs, expose Terraform variables through `TF_VAR_*`
 env:
   TF_VAR_google_project_id: ${{ secrets.GCP_PROJECT_ID }}
   TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-  TF_VAR_staging_db_password: ${{ secrets.STAGING_DB_PASSWORD }}
 ```
 
 For local plans, either export env vars:
 
 ```bash
-export TF_VAR_google_project_id="visiblefix-staging"
-export TF_VAR_staging_db_password="..."
+export TF_VAR_google_project_id="visiblefix"
 terraform plan
 ```
 
-or copy `infra/staging.tfvars.example` to `infra/staging.tfvars` for non-secret values only. Real `.tfvars` files are ignored by Git.
+Real `.tfvars` files are ignored by Git.
 
 Cloud Run runtime secrets such as `DATABASE_URL`, `JWT_ACCESS_SECRET`, and `JWT_REFRESH_SECRET` are set by the GitHub deployment workflows from GitHub Secrets. Terraform intentionally ignores Cloud Run env var drift so later Terraform applies do not erase values injected by deployment.
 
