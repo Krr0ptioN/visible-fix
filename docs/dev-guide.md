@@ -139,7 +139,7 @@ docker compose -f infra/observability/docker-compose.yml down
 
 ## 6. Google Observability Path (Production)
 
-Recommended production mapping on Google Cloud Run:
+Recommended production mapping on the Compute Engine API VM:
 
 - Logs: app stdout/stderr -> Cloud Logging
 - Traces: OpenTelemetry -> OTLP collector -> Cloud Trace (or direct Cloud Trace exporter)

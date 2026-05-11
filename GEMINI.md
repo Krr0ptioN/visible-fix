@@ -5,7 +5,7 @@ You are responsible for the entire lifecycle of a task: understanding, planning,
 
 ## Core Mandates
 
-* **Cost Optimization**: Always optimize for the **Google Cloud Free Tier** and Vercel's Hobby tier. We prioritize serverless solutions like **Google Cloud Run** and free-tier database instances (`db-f1-micro`).
+* **Cost Optimization**: Always optimize for the **Google Cloud Free Tier** and Vercel's Hobby tier. Backend hosting uses a small Google Compute Engine VM, and the production database is Neon.
 * **CI/CD Integration**: Every deployment must be automated via **GitHub Actions**.
 * **Specialized Skills**: Always invoke specialized skills for their respective domains:
   - **Terraform**: Use `terraform-engineer` and `terraform-module-library`.
@@ -52,7 +52,7 @@ We use **Nx** for monorepo management. Always prefix commands with `npx nx` or u
 
 - **CI**: GitHub Actions runs on PRs to `main`.
 - **CD (Web)**: Automatic deployment to Vercel on `main` branch updates.
-- **CD (API)**: GitHub Action builds Docker image and deploys to Google Cloud Run.
+- **CD (API)**: GitHub Action builds Docker image and deploys it to the Google Compute Engine API VM.
 - **Secrets**: Use GitHub Secrets and GCP Secret Manager. Do NOT commit `.env` files.
 
 ---

@@ -1,13 +1,7 @@
 # Enable required APIs for the backend
-resource "google_project_service" "cloud_run_api" {
+resource "google_project_service" "compute_api" {
   project            = var.google_project_id
-  service            = "run.googleapis.com"
-  disable_on_destroy = false
-}
-
-resource "google_project_service" "sql_admin_api" {
-  project            = var.google_project_id
-  service            = "sqladmin.googleapis.com"
+  service            = "compute.googleapis.com"
   disable_on_destroy = false
 }
 
@@ -23,81 +17,26 @@ resource "google_project_service" "artifact_registry_api" {
   disable_on_destroy = false
 }
 
-# 1. Cloud SQL Instance (Free Tier Optimized)
-resource "google_sql_database_instance" "postgres" {
-  name             = "visiblefix-db"
-  database_version = "POSTGRES_15"
-  region           = "us-central1"
-  project          = var.google_project_id
-
-  settings {
-    tier = "db-f1-micro" # Free tier eligible
-
-    ip_configuration {
-      ipv4_enabled = true
-    }
-
-    backup_configuration {
-      enabled = true
-    }
-  }
-
-  deletion_protection = false # Set to true for production
-
-  depends_on = [google_project_service.sql_admin_api]
-}
-
-resource "google_sql_database" "database" {
-  name     = "visiblefix"
-  instance = google_sql_database_instance.postgres.name
-  project  = var.google_project_id
-}
-
-resource "google_sql_user" "users" {
-  name     = "visiblefix_user"
-  instance = google_sql_database_instance.postgres.name
-  password = var.db_password
-  project  = var.google_project_id
-}
-
 locals {
+  region                         = "us-central1"
   deployer_service_account_email = "github-actions-deployer@${var.google_project_id}.iam.gserviceaccount.com"
 }
 
-resource "google_project_iam_member" "cloudsql_client" {
-  project = var.google_project_id
-  role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${local.deployer_service_account_email}"
+variable "api_zone" {
+  type        = string
+  description = "The Compute Engine zone for the API VM."
+  default     = "us-central1-a"
 }
 
-resource "google_project_iam_member" "deployer_service_usage_viewer" {
-  project = var.google_project_id
-  role    = "roles/serviceusage.serviceUsageViewer"
-  member  = "serviceAccount:${local.deployer_service_account_email}"
+variable "api_machine_type" {
+  type        = string
+  description = "The Compute Engine machine type for the API VM."
+  default     = "e2-micro"
 }
 
-resource "google_service_account" "api_runtime" {
-  account_id   = "visiblefix-api-runtime"
-  display_name = "VisibleFix API runtime"
-  description  = "Cloud Run service identity for the VisibleFix API"
-  project      = var.google_project_id
-}
-
-resource "google_project_iam_member" "api_runtime_cloudsql_client" {
-  project = var.google_project_id
-  role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${google_service_account.api_runtime.email}"
-}
-
-resource "google_service_account_iam_member" "api_runtime_act_as" {
-  service_account_id = google_service_account.api_runtime.name
-  role               = "roles/iam.serviceAccountUser"
-  member             = "serviceAccount:${local.deployer_service_account_email}"
-}
-
-# 2. Artifact Registry for Docker images
+# Artifact Registry for Docker images
 resource "google_artifact_registry_repository" "api_repo" {
-  location      = "us-central1"
+  location      = local.region
   repository_id = "visiblefix-api"
   description   = "Docker repository for VisibleFix API"
   format        = "DOCKER"
@@ -106,64 +45,115 @@ resource "google_artifact_registry_repository" "api_repo" {
   depends_on = [google_project_service.artifact_registry_api]
 }
 
-# 3. Cloud Run Service for the API
-resource "google_cloud_run_v2_service" "api" {
-  name     = "visiblefix-api"
-  location = "us-central1"
-  project  = var.google_project_id
-
-  deletion_protection = false
-
-  template {
-    service_account = google_service_account.api_runtime.email
-
-    containers {
-      image = "us-central1-docker.pkg.dev/${var.google_project_id}/${google_artifact_registry_repository.api_repo.repository_id}/visiblefix-api:latest"
-
-      ports {
-        container_port = 3000
-      }
-    }
-
-    scaling {
-      max_instance_count = 1 # Keep it low for cost control
-    }
-  }
-
-  traffic {
-    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
-    percent = 100
-  }
-
-  depends_on = [google_project_service.cloud_run_api]
-
-  lifecycle {
-    ignore_changes = [
-      template[0].containers[0].env,
-    ]
-  }
+resource "google_service_account" "api_vm" {
+  account_id   = "visiblefix-api-vm"
+  display_name = "VisibleFix API VM"
+  description  = "Compute Engine service identity for the VisibleFix API"
+  project      = var.google_project_id
 }
 
-# Allow public access to Cloud Run (Optional, usually behind a load balancer or for dev)
-resource "google_cloud_run_v2_service_iam_member" "noauth" {
-  location = google_cloud_run_v2_service.api.location
-  project  = var.google_project_id
-  name     = google_cloud_run_v2_service.api.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
+resource "google_project_iam_member" "api_vm_artifact_registry_reader" {
+  project = var.google_project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.api_vm.email}"
 }
 
+resource "google_project_iam_member" "deployer_artifact_registry_writer" {
+  project = var.google_project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${local.deployer_service_account_email}"
+}
 
-variable "db_password" {
-  type        = string
-  description = "The password for the database user"
-  sensitive   = true
+resource "google_project_iam_member" "deployer_compute_instance_admin" {
+  project = var.google_project_id
+  role    = "roles/compute.instanceAdmin.v1"
+  member  = "serviceAccount:${local.deployer_service_account_email}"
+}
+
+resource "google_service_account_iam_member" "deployer_api_vm_act_as" {
+  service_account_id = google_service_account.api_vm.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${local.deployer_service_account_email}"
+}
+
+resource "google_project_iam_member" "deployer_service_usage_viewer" {
+  project = var.google_project_id
+  role    = "roles/serviceusage.serviceUsageViewer"
+  member  = "serviceAccount:${local.deployer_service_account_email}"
+}
+
+resource "google_compute_address" "api" {
+  name    = "visiblefix-api-ip"
+  project = var.google_project_id
+  region  = local.region
+
+  depends_on = [google_project_service.compute_api]
+}
+
+resource "google_compute_firewall" "api_http" {
+  name    = "visiblefix-api-http"
+  project = var.google_project_id
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["3000"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["visiblefix-api"]
+
+  depends_on = [google_project_service.compute_api]
+}
+
+resource "google_compute_instance" "api" {
+  name         = "visiblefix-api"
+  project      = var.google_project_id
+  zone         = var.api_zone
+  machine_type = var.api_machine_type
+  tags         = ["visiblefix-api"]
+
+  boot_disk {
+    initialize_params {
+      image = "debian-cloud/debian-12"
+      size  = 20
+      type  = "pd-standard"
+    }
+  }
+
+  network_interface {
+    network = "default"
+
+    access_config {
+      nat_ip = google_compute_address.api.address
+    }
+  }
+
+  service_account {
+    email  = google_service_account.api_vm.email
+    scopes = ["cloud-platform"]
+  }
+
+  metadata_startup_script = <<-EOT
+    #!/bin/bash
+    set -euxo pipefail
+
+    apt-get update
+    apt-get install -y docker.io
+    systemctl enable --now docker
+    mkdir -p /opt/visiblefix
+  EOT
+
+  depends_on = [
+    google_project_service.compute_api,
+    google_project_iam_member.api_vm_artifact_registry_reader,
+  ]
 }
 
 output "api_url" {
-  value = google_cloud_run_v2_service.api.uri
+  value = "http://${google_compute_address.api.address}:3000"
 }
 
-output "db_host" {
-  value = google_sql_database_instance.postgres.public_ip_address
+output "api_ip" {
+  value = google_compute_address.api.address
 }

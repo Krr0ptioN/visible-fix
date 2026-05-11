@@ -9,6 +9,9 @@ on:
 jobs:
   main:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     services:
       postgres:
         image: postgres:16-alpine

@@ -38,8 +38,8 @@ Ready to contribute or deploy? Follow our step-by-step guides:
 ## 🚀 Tech Stack
 - **Monorepo:** [Nx](https://nx.dev)
 - **Frontend:** Next.js (Tailwind CSS) - Deployed on **Vercel**
-- **Backend:** NestJS (Node.js) - Deployed on **Google Cloud Run**
-- **Database:** PostgreSQL (Drizzle ORM) - **Google Cloud SQL**
+- **Backend:** NestJS (Node.js) - Deployed on **Google Compute Engine**
+- **Database:** PostgreSQL (Drizzle ORM) - **Neon**
 - **Mobile:** Expo / React Native
 - **Infrastructure:** Terraform
 

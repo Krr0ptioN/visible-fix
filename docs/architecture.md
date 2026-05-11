@@ -7,14 +7,14 @@ This document describes the current system architecture in this repository, incl
 ## 1. Core Runtime
 
 - Web: Next.js app (`apps/web`), intended for Vercel deployment.
-- API: NestJS app (`apps/api`), intended for Google Cloud Run.
+- API: NestJS app (`apps/api`), deployed to Google Compute Engine.
 - Mobile: React Native / Expo (`apps/mobile`) using the same API contracts.
 - Shared contracts/types: `libs/`.
 
 ## 2. Data and Storage
 
 - Primary relational store:
-  - Production: Cloud SQL PostgreSQL (Terraform-managed under `infra/`)
+  - Production: Neon PostgreSQL
   - Local: PostgreSQL via `infra/docker-compose.yml`
 - Evidence photo object storage (adapter-based):
   - `ObjectStoragePort` abstraction
@@ -49,14 +49,14 @@ Local observability stack (`infra/observability`):
 
 Google observability path:
 
-- Cloud Logging for stdout logs from Cloud Run
+- Cloud Logging for VM/container logs
 - Cloud Trace for distributed traces
 - Cloud Monitoring / Managed Service for Prometheus for metrics
 
 ## 5. Deployment Topology
 
-- Web CI/CD: `.github/workflows/cd-web.yml` (Vercel-oriented flow)
-- API CI/CD: `.github/workflows/cd-api.yml` (container build/push + Cloud Run deploy)
+- CD: `.github/workflows/cd.yml` (CI-gated API deploy followed by web deploy)
+- Infra sync: `.github/workflows/infra.yml` (Terraform apply)
 - Infra provisioning: Terraform in `infra/`
 
 ## 6. Diagram Source (D2)

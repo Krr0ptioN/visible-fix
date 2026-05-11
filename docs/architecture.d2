@@ -19,7 +19,7 @@ runtime: {
     stroke: "#2F8F46"
   }
   vercel_web: "Vercel\nNext.js (apps/web)"
-  cloud_run_api: "Cloud Run\nNestJS API (apps/api)"
+  compute_api: "Compute Engine\nNestJS API (apps/api)"
 }
 
 data: {
@@ -28,7 +28,7 @@ data: {
     fill: "#FFF5E8"
     stroke: "#D9822B"
   }
-  postgres: "PostgreSQL\nCloud SQL / local docker"
+  postgres: "PostgreSQL\nNeon / local docker"
   object_storage: "Object Storage\nLocal | MinIO | GCS"
 }
 
@@ -55,33 +55,34 @@ cicd: {
     stroke: "#7A4DB6"
   }
   gha: "GitHub Actions"
-  cd_web: "cd-web.yml"
-  cd_api: "cd-api.yml"
+  cd: "cd.yml"
+  infra: "infra.yml"
 }
 
 web_user -> vercel_web: "HTTPS"
-mobile_user -> cloud_run_api: "HTTPS /api/v1"
-vercel_web -> cloud_run_api: "rewrite /api/v1/*"
-cloud_run_api -> postgres: "Drizzle ORM"
-cloud_run_api -> object_storage: "evidence uploads"
+mobile_user -> compute_api: "HTTPS /api/v1"
+vercel_web -> compute_api: "rewrite /api/v1/*"
+compute_api -> postgres: "Drizzle ORM"
+compute_api -> object_storage: "evidence uploads"
 
-cloud_run_api -> pino: "structured logs"
-cloud_run_api -> otel: "traces"
-cloud_run_api -> prometheus: "metrics endpoint"
+compute_api -> pino: "structured logs"
+compute_api -> otel: "traces"
+compute_api -> prometheus: "metrics endpoint"
 otel -> collector: "OTLP"
 collector -> tempo: "traces"
 pino -> loki: "optional transport"
-prometheus -> cloud_run_api: "scrape /api/v1/metrics"
+prometheus -> compute_api: "scrape /api/v1/metrics"
 
 grafana -> prometheus
 grafana -> loki
 grafana -> tempo
 
 collector -> google_obs: "optional prod export"
-pino -> google_obs: "Cloud Run stdout"
+pino -> google_obs: "VM container stdout"
 prometheus -> google_obs: "managed metrics path"
 
-gha -> cd_web
-gha -> cd_api
-cd_web -> vercel_web: "deploy"
-cd_api -> cloud_run_api: "container deploy"
+gha -> cd
+gha -> infra
+cd -> compute_api: "container deploy"
+cd -> vercel_web: "deploy"
+infra -> compute_api: "provision"

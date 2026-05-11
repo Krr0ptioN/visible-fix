@@ -49,45 +49,9 @@ chmod +x scripts/setup-gcp.sh
 ```
 
 ### Cost Optimization Notes
-- **Cloud Run:** Scaled to max 1 instance, scales to zero when idle ($0 cost).
-- **Cloud SQL:** Using `db-f1-micro` which is eligible for the GCP Always Free tier (1 instance/month).
+- **Compute Engine:** Uses an `e2-micro` API VM in `us-central1-a`.
+- **Database:** Neon hosts production PostgreSQL outside the GCP Terraform stack.
 - **Artifact Registry:** Minimal storage usage for Docker images.
-
----
-
-## 🎯 2.5. Staging Environment Setup
-
-Before deploying to production, establish a staging environment for end-to-end testing.
-
-### Prerequisites
-- Google Cloud project for staging (e.g., `visiblefix-staging`)
-- Vercel staging project (e.g., `visiblefix-staging`)
-- GitHub secrets configured for staging
-
-### Staging Infrastructure
-```bash
-# Create staging resources
-cd infra
-terraform init
-terraform apply -var-file=staging.tfvars
-```
-
-This creates:
-- Cloud SQL database: `visiblefix_staging`
-- Cloud Run service: `visiblefix-api-staging`
-- Docker images tagged `:staging`
-
-### GitHub Secrets for Staging
-| Secret | Description |
-| :--- | :--- |
-| `VERCEL_STAGING_PROJECT_ID` | Vercel staging project ID |
-| `STAGING_DATABASE_URL` | Staging database connection |
-| `STAGING_GOOGLE_PROJECT_ID` | Staging GCP project ID |
-
-### Staging Deployment
-- **Push to `main`**: Deploys to staging (without `--prod` flag)
-- **PR preview**: Vercel creates preview deployments
-- **Production**: Manual promotion after staging verification
 
 ---
 
@@ -106,23 +70,21 @@ Ensure the following secrets are set in your repository:
 | `GCP_PROJECT_ID` | Your GCP Project ID (e.g., `visiblefix`) |
 | `GCP_WIF_PROVIDER` | Workload Identity Provider ID |
 | `GCP_SERVICE_ACCOUNT` | `github-actions-deployer@...` |
-| `DB_PASSWORD` | The Postgres password you set during GCP setup |
+| `DATABASE_URL` | Neon PostgreSQL connection string |
+| `JWT_ACCESS_SECRET` | API access-token signing secret |
+| `JWT_REFRESH_SECRET` | API refresh-token signing secret |
 
 ### B. Deployment Flow
 1.  **Merge to `main`**: Triggers the CI/CD pipeline.
 2.  **Frontend**: Next.js app is deployed to **Vercel**.
-3.  **Backend**: NestJS API is containerized and deployed to **Google Cloud Run**.
-4.  **Database**: Managed by **Google Cloud SQL**.
+3.  **Backend**: NestJS API is containerized and deployed to **Google Compute Engine**.
+4.  **Database**: Managed by **Neon**.
 
-### C. Cloud SQL Access
-The GitHub Actions deployer service account needs the `roles/cloudsql.client` role so the API workflow can
-open the Cloud SQL Auth Proxy and run schema setup before deployment. This binding is managed in Terraform
-under `infra/backend.tf`.
-
-The Cloud Run API revision also runs under a dedicated runtime service account with `roles/cloudsql.client`
-and `roles/iam.serviceAccountUser` on that identity is granted to the deployer. That separation keeps the
-deployment pipeline and the live runtime permissions explicit and avoids the common "deploy succeeded, runtime
-cannot connect" failure mode.
+### C. Compute Engine Access
+The GitHub Actions deployer service account needs Compute Engine instance access and Artifact Registry write
+access so the API workflow can push images and restart the container on the API VM. The VM uses its own service
+account with Artifact Registry read access so it can pull the latest image. These bindings are managed in
+`infra/backend.tf`.
 
 ---
 
