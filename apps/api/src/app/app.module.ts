@@ -84,18 +84,20 @@ export const createPinoHttpOptions = (config: ApplicationBootstrapOptions) => {
     });
   }
 
+  const formatters = {
+    bindings: () => ({
+      app: config.appName,
+      env: config.appEnv,
+    }),
+    ...(transportTargets.length === 0 ? { level: severityFields } : {}),
+  };
+
   return {
     name: config.appName,
     level: config.logging.level,
     messageKey: 'message',
     timestamp: config.logging.googleCloud ? () => `,"time":"${new Date().toISOString()}"` : undefined,
-    formatters: {
-      level: severityFields,
-      bindings: () => ({
-        app: config.appName,
-        env: config.appEnv,
-      }),
-    },
+    formatters,
     quietReqLogger: false,
     customProps: (req: IncomingMessage) => {
       const trace = cloudTrace(req, config.logging.googleCloudProjectId);

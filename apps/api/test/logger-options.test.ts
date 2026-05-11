@@ -50,4 +50,18 @@ describe('createPinoHttpOptions', () => {
     expect(options.transport).toBeUndefined();
     expect(level).toEqual({ level: 50, severity: 'ERROR', 'logging.googleapis.com/severity': 'ERROR' });
   });
+
+  it('does not combine pino transports with custom level formatters', () => {
+    const options = createPinoHttpOptions({
+      ...baseConfig,
+      logging: {
+        ...baseConfig.logging,
+        googleCloud: false,
+        pretty: true,
+      },
+    });
+
+    expect(options.transport).toBeDefined();
+    expect(options.formatters?.level).toBeUndefined();
+  });
 });
