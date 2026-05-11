@@ -119,6 +119,11 @@ The GitHub Actions deployer service account needs the `roles/cloudsql.client` ro
 open the Cloud SQL Auth Proxy and run schema setup before deployment. This binding is managed in Terraform
 under `infra/backend.tf`.
 
+The Cloud Run API revision also runs under a dedicated runtime service account with `roles/cloudsql.client`
+and `roles/iam.serviceAccountUser` on that identity is granted to the deployer. That separation keeps the
+deployment pipeline and the live runtime permissions explicit and avoids the common "deploy succeeded, runtime
+cannot connect" failure mode.
+
 ---
 
 ## 🛠️ Utility Scripts

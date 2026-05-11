@@ -77,9 +77,10 @@ jobs:
           service: 'visiblefix-api'
           image: 'us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/visiblefix-api/visiblefix-api:latest'
           region: 'us-central1'
+          flags: '--add-cloudsql-instances=${{ secrets.GCP_PROJECT_ID }}:us-central1:visiblefix-db'
           env_vars: |
             NODE_ENV=production
             API_PORT=3000
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DATABASE_URL=postgres://visiblefix_user:${{ secrets.DB_PASSWORD }}@/visiblefix?host=/cloudsql/${{ secrets.GCP_PROJECT_ID }}:us-central1:visiblefix-db
             JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }}
             JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}

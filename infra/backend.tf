@@ -64,6 +64,25 @@ resource "google_project_iam_member" "cloudsql_client" {
   member  = "serviceAccount:${local.deployer_service_account_email}"
 }
 
+resource "google_service_account" "api_runtime" {
+  account_id   = "visiblefix-api-runtime"
+  display_name = "VisibleFix API runtime"
+  description  = "Cloud Run service identity for the VisibleFix API"
+  project      = var.google_project_id
+}
+
+resource "google_project_iam_member" "api_runtime_cloudsql_client" {
+  project = var.google_project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.api_runtime.email}"
+}
+
+resource "google_service_account_iam_member" "api_runtime_act_as" {
+  service_account_id = google_service_account.api_runtime.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${local.deployer_service_account_email}"
+}
+
 # 2. Artifact Registry for Docker images
 resource "google_artifact_registry_repository" "api_repo" {
   location      = "us-central1"
@@ -84,6 +103,8 @@ resource "google_cloud_run_v2_service" "api" {
   deletion_protection = false
 
   template {
+    service_account = google_service_account.api_runtime.email
+
     containers {
       image = "us-central1-docker.pkg.dev/${var.google_project_id}/${google_artifact_registry_repository.api_repo.repository_id}/visiblefix-api:latest"
 
