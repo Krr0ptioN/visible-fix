@@ -54,6 +54,16 @@ resource "google_sql_user" "users" {
   project  = var.google_project_id
 }
 
+locals {
+  deployer_service_account_email = "github-actions-deployer@${var.google_project_id}.iam.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "cloudsql_client" {
+  project = var.google_project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${local.deployer_service_account_email}"
+}
+
 # 2. Artifact Registry for Docker images
 resource "google_artifact_registry_repository" "api_repo" {
   location      = "us-central1"

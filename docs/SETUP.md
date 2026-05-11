@@ -114,6 +114,11 @@ Ensure the following secrets are set in your repository:
 3.  **Backend**: NestJS API is containerized and deployed to **Google Cloud Run**.
 4.  **Database**: Managed by **Google Cloud SQL**.
 
+### C. Cloud SQL Access
+The GitHub Actions deployer service account needs the `roles/cloudsql.client` role so the API workflow can
+open the Cloud SQL Auth Proxy and run schema setup before deployment. This binding is managed in Terraform
+under `infra/backend.tf`.
+
 ---
 
 ## 🛠️ Utility Scripts
