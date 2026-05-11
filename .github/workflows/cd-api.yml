@@ -60,7 +60,7 @@ jobs:
 
       - name: Apply database migrations
         run: |
-          DATABASE_URL="postgres://visiblefix_user:${DB_PASSWORD}@127.0.0.1:5432/visiblefix" pnpm db:push --force
+          DATABASE_URL="postgres://visiblefix_user:${DB_PASSWORD}@127.0.0.1:5432/visiblefix" pnpm db:apply-schema
 
       - name: 'Configure Docker'
         run: |

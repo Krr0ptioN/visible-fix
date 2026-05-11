@@ -11,12 +11,21 @@ const sql = postgres(databaseUrl, {
 });
 
 try {
+  const connectionInfo = await sql`
+    select current_database() as database, current_user as "user"
+  `;
+  console.log(
+    `[db:apply-schema] connected to ${connectionInfo[0].database} as ${connectionInfo[0].user}`
+  );
+
   const existingTables = await sql`
     select table_name
     from information_schema.tables
     where table_schema = 'public'
       and table_name in ('auth_sessions', 'issues', 'municipalities', 'upvotes', 'users')
   `;
+
+  console.log(`[db:apply-schema] found ${existingTables.length}/5 expected tables`);
 
   if (existingTables.length === 5) {
     console.log('[db:apply-schema] schema already present');
