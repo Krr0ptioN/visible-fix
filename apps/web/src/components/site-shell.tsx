@@ -160,11 +160,6 @@ export function SiteShell({
         <div className="mx-auto grid max-w-[1180px] gap-6 px-4 py-8 sm:gap-10 sm:px-6 sm:py-12 lg:grid-cols-[1.3fr_1fr] lg:px-8">
           <div className="max-w-xl">
             <p className="vf-display text-xl font-bold sm:text-2xl">{t('A sharper public interface for civic trust.')}</p>
-            <p className="mt-2 text-sm leading-6 text-white/70 sm:mt-3">
-              {t(
-                "VisibleFix blends Linear's operational clarity with Uber's monochrome confidence. The result is faster scanning, clearer state, and less ornamental noise."
-              )}
-            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm text-white/72">

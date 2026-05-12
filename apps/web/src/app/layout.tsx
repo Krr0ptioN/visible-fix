@@ -1,6 +1,7 @@
 import './global.css';
 import { Changa } from 'next/font/google';
 import { GoogleAnalytics } from '@next/third-parties/google';
+import { Analytics } from '@vercel/analytics/next';
 import { I18nProvider } from '@/components/i18n-provider';
 import { getServerI18n } from '@/lib/i18n/server';
 
@@ -33,6 +34,7 @@ export default async function RootLayout({
         <I18nProvider initialLocale={i18n.locale}>
           {children}
         </I18nProvider>
+        <Analytics />
         {gaMeasurementId ? <GoogleAnalytics gaId={gaMeasurementId} /> : null}
       </body>
     </html>
