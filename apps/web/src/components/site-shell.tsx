@@ -12,7 +12,6 @@ const NAV_ITEMS: Array<{ key: ActivePage; href: string; translationKey: string }
   { key: 'home', href: '/', translationKey: 'Overview' },
   { key: 'issues', href: '/issues', translationKey: 'Discovery' },
   { key: 'report', href: '/report', translationKey: 'Report' },
-  { key: 'admin', href: '/admin', translationKey: 'Operations' },
 ];
 
 export function SiteShell({
@@ -175,12 +174,6 @@ export function SiteShell({
             <Link href="/report" className="hover:text-white">
               {t('Submit report')}
             </Link>
-            <Link href="/admin" className="hover:text-white">
-              {t('Operations console')}
-            </Link>
-            <a href="https://developers.google.com/maps/documentation" target="_blank" rel="noreferrer" className="hover:text-white">
-              {t('Google Maps docs')}
-            </a>
           </div>
         </div>
       </footer>
