@@ -33,6 +33,7 @@ const upvoteBodySchema = z.object({
 });
 
 type IssueRecord = NonNullable<Awaited<ReturnType<IssuesRepository['findById']>>>;
+const DEFAULT_PUBLIC_MUNICIPALITY_ID = 1;
 
 @Injectable()
 export class IssuesService {
@@ -81,7 +82,7 @@ export class IssuesService {
     const parsed = this.parseOrBadRequest(createIssueSchema, payload);
     const created = await this.issuesRepository.create({
       ...parsed,
-      municipalityId: municipalityId ?? null,
+      municipalityId: municipalityId ?? DEFAULT_PUBLIC_MUNICIPALITY_ID,
     });
 
     return {
