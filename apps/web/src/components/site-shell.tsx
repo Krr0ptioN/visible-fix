@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { AuthUser } from '@visiblefix/shared/types';
 import { cn } from '@/components/ui';
 import { useI18n } from '@/components/i18n-provider';
 
@@ -15,16 +17,66 @@ const NAV_ITEMS: Array<{ key: ActivePage; href: string; translationKey: string }
 
 export function SiteShell({
   activePage,
+  currentUser,
   children,
   mainClassName,
   footerClassName,
 }: {
   activePage: ActivePage;
+  currentUser?: AuthUser | null;
   children: React.ReactNode;
   mainClassName?: string;
   footerClassName?: string;
 }) {
   const { locale, locales, localeLabel, setLocale, t } = useI18n();
+  const [resolvedUser, setResolvedUser] = useState<AuthUser | null | undefined>(currentUser);
+
+  useEffect(() => {
+    if (currentUser !== undefined) {
+      setResolvedUser(currentUser);
+      return;
+    }
+
+    let isActive = true;
+
+    const loadCurrentUser = async () => {
+      try {
+        const response = await fetch('/api/v1/auth/me', {
+          credentials: 'include',
+          headers: {
+            accept: 'application/json',
+          },
+        });
+
+        if (!isActive) return;
+
+        if (response.status === 401) {
+          setResolvedUser(null);
+          return;
+        }
+
+        if (!response.ok) {
+          setResolvedUser(null);
+          return;
+        }
+
+        const body = (await response.json()) as { data?: AuthUser };
+        setResolvedUser(body.data ?? null);
+      } catch {
+        if (isActive) {
+          setResolvedUser(null);
+        }
+      }
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser]);
+
+  const signedInLabel = resolvedUser?.name || resolvedUser?.email;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -75,18 +127,29 @@ export function SiteShell({
                   </option>
                 ))}
               </select>
-              <Link
-                href="/sign-in"
-                className="inline-flex min-h-10 items-center justify-center border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:bg-secondary"
-              >
-                {t('Sign in')}
-              </Link>
-              <Link
-                href="/sign-up"
-                className="inline-flex min-h-10 items-center justify-center border border-primary bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-[#1a1a1d]"
-              >
-                {t('Create account')}
-              </Link>
+              {resolvedUser ? (
+                <div className="min-h-10 border border-border bg-card px-3 py-2 text-sm shadow-razor">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t('Signed in as')}</p>
+                  <p className="max-w-[180px] truncate font-semibold text-foreground" title={resolvedUser.email}>
+                    {signedInLabel}
+                  </p>
+                </div>
+              ) : resolvedUser === null ? (
+                <>
+                  <Link
+                    href="/sign-in"
+                    className="inline-flex min-h-10 items-center justify-center border border-border bg-card px-4 text-sm font-semibold text-foreground transition hover:bg-secondary"
+                  >
+                    {t('Sign in')}
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    className="inline-flex min-h-10 items-center justify-center border border-primary bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-[#1a1a1d]"
+                  >
+                    {t('Create account')}
+                  </Link>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

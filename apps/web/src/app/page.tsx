@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { SiteShell } from '@/components/site-shell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, SectionEyebrow } from '@/components/ui';
+import { getCurrentSession } from '@/lib/auth-api';
 import { getServerI18n } from '@/lib/i18n/server';
 
 export default async function IndexPage() {
-  const { t } = await getServerI18n();
+  const [{ t }, currentUser] = await Promise.all([getServerI18n(), getCurrentSession()]);
   const metrics = [
     { label: t('Report time'), value: '<60s' },
     { label: t('Public status flow'), value: t('4 states') },
@@ -12,7 +13,7 @@ export default async function IndexPage() {
   ];
 
   return (
-    <SiteShell activePage="home">
+    <SiteShell activePage="home" currentUser={currentUser}>
       <section className="grid gap-6">
         <Card className="overflow-hidden">
           <CardHeader className="border-b border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.2))]">
