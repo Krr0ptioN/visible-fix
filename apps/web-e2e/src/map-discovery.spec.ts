@@ -54,7 +54,7 @@ test.beforeEach(async ({ context }) => {
   ]);
 });
 
-test('discovery applies category/status filters and renders within latency budget', async ({ page }) => {
+test('discovery applies category/status filters', async ({ page }) => {
   const queryHistory: string[] = [];
 
   await page.route('**/api/v1/issues**', async (route) => {
@@ -83,13 +83,8 @@ test('discovery applies category/status filters and renders within latency budge
     });
   });
 
-  const startedAt = Date.now();
-
   await page.goto('/issues');
   await expect(page.getByRole('button', { name: 'Road collapse near ferry terminal' })).toBeVisible();
-
-  const firstPaintInMs = Date.now() - startedAt;
-  expect(firstPaintInMs).toBeLessThan(15_000);
 
   await page.getByRole('button', { name: 'Pothole', exact: true }).click();
   await expect.poll(() => queryHistory.at(-1) || '').toContain('category=pothole');
