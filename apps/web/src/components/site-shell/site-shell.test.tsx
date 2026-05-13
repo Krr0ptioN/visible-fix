@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import React from 'react';
-import { SiteShell } from './site-shell';
+import { SiteShell } from '.';
 
 jest.mock('next/link', () => {
   return function MockLink({

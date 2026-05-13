@@ -1,4 +1,4 @@
-name: CD
+name: Deploy
 
 on:
   workflow_run:
@@ -6,6 +6,16 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      run_contract_migrations:
+        description: Run contract migrations after API and web deploy.
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
 
 env:
   API_INSTANCE: visiblefix-api
@@ -14,13 +24,14 @@ env:
   API_ADDRESS_NAME: visiblefix-api-ip
   ARTIFACT_REGION: us-central1
   IMAGE_NAME: visiblefix-api
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
   NEXT_PUBLIC_GOOGLE_MAP_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAP_ID }}
 
 jobs:
-  deploy-api:
+  api:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
@@ -32,19 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-pnpm
 
       - id: auth
         uses: google-github-actions/auth@v2
@@ -60,18 +59,23 @@ jobs:
 
       - name: Build and Push Container
         env:
-          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
         run: scripts/ci/build-push-api-image.sh
 
-      - name: Apply database migrations
+      - name: Check expand-safe database migrations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm db:apply-schema
+        run: pnpm db:migrate:check
+
+      - name: Apply expand-safe database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:expand
 
       - name: Deploy to Compute Engine
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
@@ -88,7 +92,12 @@ jobs:
           API_URL: ${{ steps.api-url.outputs.api_url }}
         run: scripts/ci/wait-for-api-health.sh
 
-  deploy-web:
+      - name: Re-apply expand-safe migrations after API health
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:expand
+
+  web:
     needs: deploy-api
     runs-on: ubuntu-latest
     env:
@@ -97,19 +106,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup-pnpm
         with:
-          version: 10
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+          install: 'false'
 
       - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+        run: pnpm install --global vercel@latest
 
       - name: Verify required build env
         run: |
@@ -124,3 +126,18 @@ jobs:
 
       - name: Deploy Project Artifacts to Vercel
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  contract-migrations:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_contract_migrations }}
+    needs: deploy-web
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - name: Apply contract database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:contract
