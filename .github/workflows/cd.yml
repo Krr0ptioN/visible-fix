@@ -130,8 +130,9 @@ jobs:
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
   contract-migrations:
+    name: "Contract Migrations"
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_contract_migrations }}
-    needs: deploy-web
+    needs: web
     runs-on: ubuntu-latest
 
     steps:
