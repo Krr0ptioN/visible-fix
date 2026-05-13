@@ -32,6 +32,7 @@ env:
 
 jobs:
   api:
+    name: "Deploy API"
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
@@ -98,7 +99,8 @@ jobs:
         run: pnpm db:migrate:expand
 
   web:
-    needs: deploy-api
+    name: "Deploy Web"
+    needs: api
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_API_URL: ${{ needs.deploy-api.outputs.api_url }}
