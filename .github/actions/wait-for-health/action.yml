@@ -1,0 +1,16 @@
+name: Wait for Health
+description: Wait for the API to become healthy.
+
+inputs:
+  api_url:
+    description: The URL of the API to check.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Wait for API health
+      shell: bash
+      env:
+        API_URL: ${{ inputs.api_url }}
+      run: scripts/ci/wait-for-api-health.sh

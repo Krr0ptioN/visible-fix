@@ -1,0 +1,19 @@
+name: Run Database Migration
+description: Run a specific type of database migration.
+
+inputs:
+  database_url:
+    description: The database connection string.
+    required: true
+  migration_type:
+    description: The type of migration (check, expand, contract).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Run migration
+      shell: bash
+      env:
+        DATABASE_URL: ${{ inputs.database_url }}
+      run: pnpm db:migrate:${{ inputs.migration_type }}

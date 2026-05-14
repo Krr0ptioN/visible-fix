@@ -1,0 +1,29 @@
+name: Setup GCP and Docker
+description: Authenticate with GCP using WIF and configure Docker for Artifact Registry.
+
+inputs:
+  workload_identity_provider:
+    description: The WIF provider string.
+    required: true
+  service_account:
+    description: The GCP service account email.
+    required: true
+  artifact_region:
+    description: The region for Artifact Registry.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ inputs.workload_identity_provider }}
+        service_account: ${{ inputs.service_account }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker
+      shell: bash
+      run: gcloud auth configure-docker "${{ inputs.artifact_region }}-docker.pkg.dev" --quiet
