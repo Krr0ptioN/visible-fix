@@ -1,7 +1,5 @@
 import { DynamicModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { randomUUID } from 'node:crypto';
 import { LoggerModule } from 'nestjs-pino';
 import { validateApiEnv } from '@visiblefix/shared/config';
 import { createPinoHttpOptions } from './app.logging';
