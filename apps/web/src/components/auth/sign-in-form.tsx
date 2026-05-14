@@ -2,10 +2,10 @@
 
 import { startTransition, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { AuthUser } from '@visiblefix/shared/types';
 import { getPostAuthRedirectPath } from '@/lib/auth-redirect';
 import { useI18n } from '@/components/i18n-provider';
 import { Button, Input } from '@/components/ui';
+import { useSignInMutation } from './api';
 
 export function SignInForm({
   nextPath,
@@ -17,32 +17,15 @@ export function SignInForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const signInMutation = useSignInMutation();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
-    setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/v1/auth/sign-in', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      const body = (await response.json().catch(() => null)) as { data?: AuthUser; message?: string } | null;
-
-      if (!response.ok || !body?.data) {
-        throw new Error(body?.message || t('Unable to sign in.'));
-      }
-
-      const destination = getPostAuthRedirectPath(body.data, nextPath);
+      const user = await signInMutation.mutateAsync({ email, password });
+      const destination = getPostAuthRedirectPath(user, nextPath);
 
       startTransition(() => {
         router.replace(destination);
@@ -50,8 +33,6 @@ export function SignInForm({
       });
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : t('Unable to sign in.'));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -75,8 +56,8 @@ export function SignInForm({
 
       {error ? <p className="border border-[#fda29b] bg-[#fef3f2] px-4 py-3 text-sm text-[#b42318]">{error}</p> : null}
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? t('Signing in…') : t('Sign in')}
+      <Button type="submit" className="w-full" disabled={signInMutation.isPending}>
+        {signInMutation.isPending ? t('Signing in…') : t('Sign in')}
       </Button>
     </form>
   );

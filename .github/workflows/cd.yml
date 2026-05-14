@@ -1,4 +1,4 @@
-name: CD
+name: Deploy
 
 on:
   workflow_run:
@@ -6,6 +6,16 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      run_contract_migrations:
+        description: Run contract migrations after API and web deploy.
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
 
 env:
   API_INSTANCE: visiblefix-api
@@ -14,14 +24,35 @@ env:
   API_ADDRESS_NAME: visiblefix-api-ip
   ARTIFACT_REGION: us-central1
   IMAGE_NAME: visiblefix-api
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
-  NEXT_PUBLIC_GOOGLE_MAP_ID: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAP_ID }}
+  IMAGE_TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
-  deploy-api:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+  detect-changes:
+    name: "Detect Changes"
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - name: Set Nx SHAs
+        uses: nrwl/nx-set-shas@v4
+
+      - id: filter
+        run: |
+          AFFECTED=$(pnpm nx show projects --affected --json)
+          echo "api=$(echo $AFFECTED | jq -r 'contains(["visiblefix-api"])')" >> "$GITHUB_OUTPUT"
+          echo "web=$(echo $AFFECTED | jq -r 'contains(["web"])')" >> "$GITHUB_OUTPUT"
+
+  api:
+    name: "Deploy API"
+    needs: detect-changes
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' || needs.detect-changes.outputs.web == 'true' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,46 +63,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10
+      - uses: ./.github/actions/setup-pnpm
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - id: auth
-        uses: google-github-actions/auth@v2
+      - name: Setup GCP and Docker
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' }}
+        uses: ./.github/actions/setup-gcp-docker
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Configure Docker
-        run: gcloud auth configure-docker "${ARTIFACT_REGION}-docker.pkg.dev" --quiet
+          artifact_region: ${{ env.ARTIFACT_REGION }}
 
       - name: Build and Push Container
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' }}
         env:
-          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
         run: scripts/ci/build-push-api-image.sh
 
-      - name: Apply database migrations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: pnpm db:apply-schema
+      - name: Check database migrations
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' }}
+        uses: ./.github/actions/db-migrate
+        with:
+          database_url: ${{ secrets.DATABASE_URL }}
+          migration_type: check
+
+      - name: Apply expand migrations
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' }}
+        uses: ./.github/actions/db-migrate
+        with:
+          database_url: ${{ secrets.DATABASE_URL }}
+          migration_type: expand
 
       - name: Deploy to Compute Engine
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' }}
         env:
+          API_INSTANCE: ${{ env.API_INSTANCE }}
+          API_ZONE: ${{ env.API_ZONE }}
+          ARTIFACT_REGION: ${{ env.ARTIFACT_REGION }}
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:latest
+          IMAGE: ${{ env.ARTIFACT_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
@@ -81,46 +110,57 @@ jobs:
         name: Resolve API URL
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          ARTIFACT_REGION: ${{ env.ARTIFACT_REGION }}
+          API_ADDRESS_NAME: ${{ env.API_ADDRESS_NAME }}
+          API_PORT: ${{ env.API_PORT }}
         run: scripts/ci/resolve-api-url.sh
 
       - name: Wait for API health
-        env:
-          API_URL: ${{ steps.api-url.outputs.api_url }}
-        run: scripts/ci/wait-for-api-health.sh
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' }}
+        uses: ./.github/actions/wait-for-health
+        with:
+          api_url: ${{ steps.api-url.outputs.api_url }}
 
-  deploy-web:
-    needs: deploy-api
+      - name: Finalize expand migrations
+        if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.api == 'true' }}
+        uses: ./.github/actions/db-migrate
+        with:
+          database_url: ${{ secrets.DATABASE_URL }}
+          migration_type: expand
+
+  web:
+    name: "Deploy Web"
+    needs: [detect-changes, api]
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.web == 'true' }}
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_API_URL: ${{ needs.deploy-api.outputs.api_url }}
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup-pnpm
         with:
-          version: 10
+          install: 'false'
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Deploy to Vercel
+        uses: ./.github/actions/deploy-vercel
         with:
-          node-version: 22
-          cache: pnpm
+          vercel_token: ${{ secrets.VERCEL_TOKEN }}
+          vercel_org_id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel_project_id: ${{ secrets.VERCEL_PROJECT_ID }}
+          next_public_api_url: ${{ needs.api.outputs.api_url }}
+          next_public_google_maps_api_key: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+  contract-migrations:
+    name: "Contract Migrations"
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_contract_migrations }}
+    needs: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Verify required build env
-        run: |
-          test -n "$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"
-          test -n "$NEXT_PUBLIC_API_URL"
+      - uses: ./.github/actions/setup-pnpm
 
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Apply contract migrations
+        uses: ./.github/actions/db-migrate
+        with:
+          database_url: ${{ secrets.DATABASE_URL }}
+          migration_type: contract

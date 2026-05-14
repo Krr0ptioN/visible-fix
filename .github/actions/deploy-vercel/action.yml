@@ -1,0 +1,58 @@
+name: Deploy to Vercel
+description: Build and deploy the project to Vercel.
+
+inputs:
+  vercel_token:
+    description: Vercel Auth Token.
+    required: true
+  vercel_org_id:
+    description: Vercel Organization ID.
+    required: true
+  vercel_project_id:
+    description: Vercel Project ID.
+    required: true
+  next_public_api_url:
+    description: Public API URL.
+    required: true
+  next_public_google_maps_api_key:
+    description: Google Maps API Key.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Vercel CLI
+      shell: bash
+      run: pnpm install --global vercel@latest
+
+    - name: Verify required build env
+      shell: bash
+      env:
+        NEXT_PUBLIC_API_URL: ${{ inputs.next_public_api_url }}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ inputs.next_public_google_maps_api_key }}
+      run: |
+        test -n "$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"
+        test -n "$NEXT_PUBLIC_API_URL"
+
+    - name: Pull Vercel Environment Information
+      shell: bash
+      env:
+        VERCEL_ORG_ID: ${{ inputs.vercel_org_id }}
+        VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id }}
+      run: vercel pull --yes --environment=production --token=${{ inputs.vercel_token }}
+
+    - name: Build Project Artifacts
+      shell: bash
+      env:
+        VERCEL_ORG_ID: ${{ inputs.vercel_org_id }}
+        VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id }}
+        NEXT_PUBLIC_API_URL: ${{ inputs.next_public_api_url }}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ inputs.next_public_google_maps_api_key }}
+      run: vercel build --prod --token=${{ inputs.vercel_token }}
+
+    - name: Deploy Project Artifacts to Vercel
+      shell: bash
+      env:
+        VERCEL_ORG_ID: ${{ inputs.vercel_org_id }}
+        VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id }}
+      run: vercel deploy --prebuilt --prod --token=${{ inputs.vercel_token }}

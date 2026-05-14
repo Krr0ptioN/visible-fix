@@ -1,0 +1,29 @@
+name: Setup pnpm workspace
+description: Set up pnpm, Node.js, dependency caching, and optionally install dependencies.
+
+inputs:
+  node-version:
+    description: Node.js version to install.
+    default: '22'
+  pnpm-version:
+    description: pnpm version to install.
+    default: '10'
+  install:
+    description: Whether to run pnpm install.
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+
+    - if: ${{ inputs.install == 'true' }}
+      shell: bash
+      run: pnpm install --frozen-lockfile

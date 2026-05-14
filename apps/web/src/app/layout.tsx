@@ -3,6 +3,7 @@ import { Changa } from 'next/font/google';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { Analytics } from '@vercel/analytics/next';
 import { I18nProvider } from '@/components/i18n-provider';
+import { QueryProvider } from '@/components/query-provider';
 import { getServerI18n } from '@/lib/i18n/server';
 
 const changa = Changa({
@@ -31,9 +32,11 @@ export default async function RootLayout({
   return (
     <html lang={i18n.htmlLang} dir={i18n.dir}>
       <body className={changa.variable}>
-        <I18nProvider initialLocale={i18n.locale}>
-          {children}
-        </I18nProvider>
+        <QueryProvider>
+          <I18nProvider initialLocale={i18n.locale}>
+            {children}
+          </I18nProvider>
+        </QueryProvider>
         <Analytics />
         {gaMeasurementId ? <GoogleAnalytics gaId={gaMeasurementId} /> : null}
       </body>
