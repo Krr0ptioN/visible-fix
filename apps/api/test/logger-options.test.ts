@@ -1,4 +1,4 @@
-import { createPinoHttpOptions } from '../src/app/app.module';
+import { createPinoHttpOptions } from '../src/app/app.logging';
 import type { ApplicationBootstrapOptions } from '../src/app/app.config';
 
 const baseConfig: ApplicationBootstrapOptions = {

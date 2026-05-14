@@ -33,6 +33,12 @@ jest.mock('@/components/i18n-provider', () => ({
   }),
 }));
 
+jest.mock('@/components/auth/api', () => ({
+  useCurrentUserQuery: (initialUser: unknown) => ({
+    data: initialUser,
+  }),
+}));
+
 describe('SiteShell', () => {
   it('shows signed-in identity instead of auth entry links when a user is present', () => {
     const html = renderToStaticMarkup(
