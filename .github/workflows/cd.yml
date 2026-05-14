@@ -30,6 +30,10 @@ jobs:
   detect-changes:
     name: "Detect Changes"
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
     outputs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
